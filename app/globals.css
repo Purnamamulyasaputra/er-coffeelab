@@ -1,26 +1,125 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
+@theme {
+  --font-sans: var(--font-source-sans-pro), ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-brand-blue: var(--brand-blue);
+  --color-brand-blue-foreground: var(--brand-blue-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+
+  /* Sidebar */
+  --color-sidebar: var(--sidebar-bg);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-muted: var(--sidebar-muted);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-active-bg: var(--sidebar-active-bg);
+  --color-sidebar-active-text: var(--sidebar-active-text);
+  --color-sidebar-hover-bg: var(--sidebar-hover-bg);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+:root {
+  --background: #f5f6fa;
+  --foreground: #1a1e4b;
+  --card: #ffffff;
+  --card-foreground: #1a1e4b;
+  --primary: #1a1e4b;
+  --primary-foreground: #ffffff;
+  --secondary: #f0f1f5;
+  --secondary-foreground: #1a1e4b;
+  --muted: #edeef3;
+  --muted-foreground: #6b7094;
+  --brand-blue: #2a2d4a;
+  --brand-blue-foreground: #ffffff;
+  --border: #d8dae6;
+  --input: #d8dae6;
+  --ring: #2a2d4a;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --success: #22c55e;
+  --success-foreground: #ffffff;
+  --warning: #f59e0b;
+  --warning-foreground: #ffffff;
+
+  /* Sidebar tokens – always dark mode */
+  --sidebar-bg: #111328;
+  --sidebar-foreground: #ffffff;
+  --sidebar-muted: rgba(255,255,255,0.6);
+  --sidebar-border: rgba(255,255,255,0.1);
+  --sidebar-active-bg: rgba(255,255,255,0.1);
+  --sidebar-active-text: #ffffff;
+  --sidebar-hover-bg: rgba(255,255,255,0.05);
+
+  /* Chart tokens */
+  --chart-grid: rgba(0,0,0,0.08);
+  --chart-text: #6b7094;
+  --chart-tooltip-bg: #ffffff;
+  --chart-tooltip-border: #e2e4ed;
+  --chart-tooltip-text: #1a1e4b;
+}
+
+.dark {
+  --background: #0d0f1a;
+  --foreground: #e8e9f0;
+  --card: #151729;
+  --card-foreground: #e8e9f0;
+  --primary: #6c72cb;
+  --primary-foreground: #ffffff;
+  --secondary: #1c1f3a;
+  --secondary-foreground: #e8e9f0;
+  --muted: #1c1f3a;
+  --muted-foreground: #8b8fa8;
+  --brand-blue: #2a2d4a;
+  --brand-blue-foreground: #ffffff;
+  --border: #252848;
+  --input: #252848;
+  --ring: #2a2d4a;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --success: #22c55e;
+  --success-foreground: #ffffff;
+  --warning: #f59e0b;
+  --warning-foreground: #ffffff;
+
+  /* Sidebar tokens – dark mode (branded navy) */
+  --sidebar-bg: #111328;
+  --sidebar-foreground: #ffffff;
+  --sidebar-muted: rgba(255,255,255,0.6);
+  --sidebar-border: rgba(255,255,255,0.1);
+  --sidebar-active-bg: rgba(255,255,255,0.1);
+  --sidebar-active-text: #ffffff;
+  --sidebar-hover-bg: rgba(255,255,255,0.05);
+
+  /* Chart tokens */
+  --chart-grid: rgba(255,255,255,0.1);
+  --chart-text: rgba(255,255,255,0.5);
+  --chart-tooltip-bg: #151729;
+  --chart-tooltip-border: #252848;
+  --chart-tooltip-text: #ffffff;
 }
 
 body {
-  background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--background);
+  font-family: var(--font-sans);
+}
+
+button {
+  cursor: pointer;
 }

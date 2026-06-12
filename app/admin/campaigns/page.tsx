@@ -1,0 +1,7 @@
+import { getCampaigns } from "@/lib/queries/campaigns"
+import { CampaignsClient } from "./campaigns-client"
+
+export default async function CampaignsPage() {
+  const data = await getCampaigns()
+  return <CampaignsClient initialData={data} />
+}

@@ -40,7 +40,16 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# Agent Instructions and Requirements
-AGENTS.md
-CLAUDE.md
-/require/
+# project reference documentation (hanya push file MD tertentu)
+/require/*
+!/require/ERD.md
+!/require/PRD.md
+!/require/TRD.md
+
+# temporary agent scripts & output
+/scratch/
+*.log
+
+# editor configs
+.vscode/
+.idea/
