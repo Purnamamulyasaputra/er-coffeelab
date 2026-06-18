@@ -9,9 +9,11 @@ import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
 import { useToast } from "@/components/ui/use-toast"
 import { useRouter } from "next/navigation"
+import { ConfirmationModal } from "@/components/ui/confirmation-modal"
 import dynamic from "next/dynamic"
 
 const MapPicker = dynamic(() => import("@/components/shared/map-picker"), { ssr: false })
@@ -147,6 +149,12 @@ export function BranchesClient({ initialData }: { initialData: any[] }) {
   const columns = [
     { header: "No", cell: (_: unknown, index: number) => index + 1 },
     { header: "Name", accessorKey: "name" as const },
+    { 
+      header: "POS Key", 
+      cell: (item: any) => (
+        <Badge variant="cool" className="font-mono text-[11px] tracking-widest">{item.pos_key || '-'}</Badge>
+      ) 
+    },
     {
       header: "Status",
       cell: (item: any) => (
@@ -397,33 +405,34 @@ export function BranchesClient({ initialData }: { initialData: any[] }) {
           </div>
 
         </div>
-        <DialogFooter>
-          <Button variant="secondary" onClick={() => setOpen(false)} disabled={loading}>Cancel</Button>
-          <Button variant="default" className="gap-1.5" onClick={handleSave} disabled={loading || !name || !address}>
-            <Check size={14} /> {loading ? "Saving..." : "Save"}
+        <DialogFooter className="mt-4">
+          <Button 
+            variant="secondary" 
+            onClick={() => setOpen(false)} 
+            disabled={loading} 
+            className="bg-slate-600 hover:bg-slate-700 text-white border-0 font-medium px-6"
+          >
+            Cancel
+          </Button>
+          <Button 
+            className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-6 disabled:opacity-50 disabled:cursor-not-allowed" 
+            onClick={handleSave} 
+            disabled={loading || !name || !address}
+          >
+            <Check size={16} /> {loading ? "Saving..." : "Save"}
           </Button>
         </DialogFooter>
       </Dialog>
 
-      <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen} className="sm:max-w-[400px]">
-        <DialogHeader>
-          <DialogTitle>Delete Branch</DialogTitle>
-        </DialogHeader>
-        <div className="py-4">
-          <p className="text-sm text-muted-foreground">
-            Are you sure you want to delete <span className="font-bold text-foreground">{branchToDelete?.name}</span>?
-            This action cannot be undone.
-          </p>
-        </div>
-        <DialogFooter>
-          <Button variant="secondary" onClick={() => setDeleteConfirmOpen(false)} disabled={loading}>
-            Cancel
-          </Button>
-          <Button variant="destructive" onClick={confirmDelete} disabled={loading}>
-            {loading ? "Deleting..." : "Delete"}
-          </Button>
-        </DialogFooter>
-      </Dialog>
+      <ConfirmationModal 
+        isOpen={deleteConfirmOpen}
+        onClose={() => setDeleteConfirmOpen(false)}
+        onConfirm={confirmDelete}
+        type="danger"
+        title="Delete Branch"
+        message={<>Are you sure you want to delete <span className="font-bold text-white">{branchToDelete?.name}</span>? This action cannot be undone.</>}
+        confirmText={loading ? "Deleting..." : "Delete"}
+      />
     </div>
   )
 }

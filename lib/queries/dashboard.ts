@@ -1,129 +1,140 @@
 import { sql } from "@/lib/db"
 
-export async function getDashboardData() {
+export async function getDashboardData(branchId?: number) {
   // 1. KPIs — Orders Today, Revenue Today, AOV Today, Total Customers
-  const kpiRows = await sql`
-    SELECT
+  const [
+    kpiRows, yesterdayKpi, totalCustomers, lastMonthCustomers,
+    revenueOrders, paymentSplit, branchPerf, sourceSplit,
+    posAdopt, cashVar, kdsBump, invAcc, fulfillRate, retainRate
+  ] = await Promise.all([
+    sql`
+      SELECT
       COALESCE(COUNT(id), 0)::int                                            AS orders_today,
       COALESCE(SUM(total_amount), 0)::bigint                                AS revenue_today,
       CASE WHEN COUNT(id) > 0 THEN ROUND(SUM(total_amount)::numeric / COUNT(id), 0) ELSE 0 END AS aov_today
     FROM orders
     WHERE created_at::date = CURRENT_DATE AND status != 'CANCELLED'
-  `
-
-  const yesterdayKpi = await sql`
-    SELECT
+      AND (${branchId || null}::int IS NULL OR branch_id = ${branchId || null}::int)
+  `,
+    sql`
+      SELECT
       COALESCE(COUNT(id), 0)::int           AS orders_yesterday,
       COALESCE(SUM(total_amount), 0)::bigint AS revenue_yesterday,
       CASE WHEN COUNT(id) > 0 THEN ROUND(SUM(total_amount)::numeric / COUNT(id), 0) ELSE 0 END AS aov_yesterday
     FROM orders
     WHERE created_at::date = CURRENT_DATE - INTERVAL '1 day' AND status != 'CANCELLED'
-  `
+      AND (${branchId || null}::int IS NULL OR branch_id = ${branchId || null}::int)
+  `,
+    sql`
+      SELECT COUNT(id)::int AS total FROM customers WHERE status = 'ACTIVE'
+    `,
 
-  const totalCustomers = await sql`
-    SELECT COUNT(id)::int AS total FROM customers WHERE status = 'ACTIVE'
-  `
-
-  const lastMonthCustomers = await sql`
-    SELECT COUNT(id)::int AS total FROM customers
-    WHERE status = 'ACTIVE' AND created_at < date_trunc('month', NOW())
-  `
+    sql`
+      SELECT COUNT(id)::int AS total FROM customers
+      WHERE status = 'ACTIVE' AND created_at < date_trunc('month', NOW())
+    `,
 
   // 2. Revenue + Orders by month (last 6 months)
-  const revenueOrders = await sql`
-    SELECT
+    sql`
+      SELECT
       TO_CHAR(created_at, 'Mon') AS m,
       EXTRACT(MONTH FROM created_at)::int AS month_num,
       ROUND(SUM(total_amount) / 1000000.0, 2) AS r,
       COUNT(id)::int AS o
     FROM orders
     WHERE created_at >= NOW() - INTERVAL '6 months' AND status != 'CANCELLED'
+      AND (${branchId || null}::int IS NULL OR branch_id = ${branchId || null}::int)
     GROUP BY m, month_num
     ORDER BY month_num ASC
-  `
-
+  `,
   // 3. Payment Split
-  const paymentSplit = await sql`
-    SELECT
+    sql`
+      SELECT
       COALESCE(pm.name, o.payment_method_code, 'Unknown') AS name,
       COUNT(o.id)::int AS value
     FROM orders o
     LEFT JOIN payment_methods pm ON pm.code = o.payment_method_code
     WHERE o.status != 'CANCELLED' AND o.payment_method_code IS NOT NULL
+      AND (${branchId || null}::int IS NULL OR o.branch_id = ${branchId || null}::int)
     GROUP BY pm.name, o.payment_method_code
     ORDER BY value DESC
-  `
-
+  `,
   // 4. Branch Performance — total revenue per branch (in millions)
-  const branchPerf = await sql`
-    SELECT
+    sql`
+      SELECT
       REPLACE(b.name, 'ER Coffeelab - ', '') AS n,
       ROUND(COALESCE(SUM(o.total_amount), 0) / 1000000.0, 1) AS r
     FROM branches b
     LEFT JOIN orders o ON o.branch_id = b.id AND o.status != 'CANCELLED'
+    WHERE (${branchId || null}::int IS NULL OR b.id = ${branchId || null}::int)
     GROUP BY b.id, b.name
     ORDER BY r DESC
-  `
-
+  `,
   // 5. Source Split — orders grouped by order_source (APP vs POS) per month
-  const sourceSplit = await sql`
-    SELECT
+    sql`
+      SELECT
       TO_CHAR(created_at, 'Mon') AS m,
       EXTRACT(MONTH FROM created_at)::int AS month_num,
       COALESCE(SUM(CASE WHEN order_source = 'APP' THEN 1 ELSE 0 END), 0)::int AS a,
       COALESCE(SUM(CASE WHEN order_source = 'POS' THEN 1 ELSE 0 END), 0)::int AS p
     FROM orders
     WHERE created_at >= NOW() - INTERVAL '6 months' AND status != 'CANCELLED'
+      AND (${branchId || null}::int IS NULL OR branch_id = ${branchId || null}::int)
     GROUP BY m, month_num
     ORDER BY month_num ASC
-  `
-
+  `,
   // 6. Scorecards
   // POS Adopt = % orders from POS
-  const posAdopt = await sql`
-    SELECT
+    sql`
+      SELECT
       CASE WHEN COUNT(id) > 0
         THEN ROUND(SUM(CASE WHEN is_pos = true THEN 1 ELSE 0 END)::numeric / COUNT(id) * 100, 0)
         ELSE 0
       END AS pct
     FROM orders WHERE status != 'CANCELLED'
-  `
+      AND (${branchId || null}::int IS NULL OR branch_id = ${branchId || null}::int)
+  `,
   // Cash Variance = SUM of |cash_difference| from closed shifts this month
-  const cashVar = await sql`
-    SELECT COALESCE(SUM(ABS(COALESCE(cash_difference, 0))), 0) AS val
+    sql`
+      SELECT COALESCE(SUM(ABS(COALESCE(cash_difference, 0))), 0) AS val
     FROM shifts
     WHERE status = 'CLOSED' AND closed_at >= date_trunc('month', NOW())
-  `
+      AND (${branchId || null}::int IS NULL OR branch_id = ${branchId || null}::int)
+  `,
   // KDS Bump = avg time from PREPARING to READY (in minutes)
-  const kdsBump = await sql`
-    SELECT
+    sql`
+      SELECT
       ROUND(AVG(EXTRACT(EPOCH FROM (ready.created_at - prep.created_at)) / 60.0), 1) AS avg_min
     FROM order_status_logs prep
     JOIN order_status_logs ready ON ready.order_id = prep.order_id AND ready.status = 'READY'
+    JOIN orders o ON o.id = prep.order_id
     WHERE prep.status = 'PREPARING'
       AND prep.created_at >= NOW() - INTERVAL '30 days'
-  `
+      AND (${branchId || null}::int IS NULL OR o.branch_id = ${branchId || null}::int)
+  `,
   // Inventory Accuracy = % opname items where difference = 0
-  const invAcc = await sql`
-    SELECT
-      CASE WHEN COUNT(id) > 0
-        THEN ROUND(SUM(CASE WHEN ABS(difference::numeric) < 0.01 THEN 1 ELSE 0 END)::numeric / COUNT(id) * 100, 0)
+    sql`
+      SELECT
+      CASE WHEN COUNT(i.id) > 0
+        THEN ROUND(SUM(CASE WHEN ABS(i.difference::numeric) < 0.01 THEN 1 ELSE 0 END)::numeric / COUNT(i.id) * 100, 0)
         ELSE 0
       END AS pct
-    FROM stock_opname_items
-  `
-
+    FROM stock_opname_items i
+    JOIN stock_opnames o ON o.id = i.stock_opname_id
+    WHERE (${branchId || null}::int IS NULL OR o.branch_id = ${branchId || null}::int)
+  `,
   // 7. KPI Gauges — order fulfillment rate, customer retention, target achievement
-  const fulfillRate = await sql`
-    SELECT
+    sql`
+      SELECT
       CASE WHEN COUNT(id) > 0
         THEN ROUND(SUM(CASE WHEN status = 'COMPLETED' THEN 1 ELSE 0 END)::numeric / COUNT(id) * 100, 0)
         ELSE 0
       END AS pct
     FROM orders WHERE created_at >= NOW() - INTERVAL '30 days'
-  `
-  const retainRate = await sql`
-    SELECT
+      AND (${branchId || null}::int IS NULL OR branch_id = ${branchId || null}::int)
+  `,
+    sql`
+      SELECT
       CASE WHEN COUNT(DISTINCT customer_id) > 0
         THEN ROUND(
           COUNT(DISTINCT CASE WHEN c2.cnt > 1 THEN c2.customer_id END)::numeric /
@@ -135,9 +146,11 @@ export async function getDashboardData() {
       SELECT customer_id, COUNT(id) AS cnt
       FROM orders
       WHERE customer_id IS NOT NULL AND status != 'CANCELLED'
+        AND (${branchId || null}::int IS NULL OR branch_id = ${branchId || null}::int)
       GROUP BY customer_id
     ) c2
-  `
+    `
+  ])
 
   // Helper to compute % change
   const pctChange = (cur: number, prev: number) => {

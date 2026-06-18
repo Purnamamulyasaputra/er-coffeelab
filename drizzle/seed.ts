@@ -13,32 +13,36 @@ async function seed() {
 
   // 1. Admins
   await db.insert(schema.admins).values([
-    { name: 'Ahmad Fulan', email: 'ahmad@ercoffeelab.id', passwordHash: '$2a$12$Hash1', role: 'SUPERADMIN', status: 'ACTIVE' },
+    { name: 'Ahmad Fulan', email: 'superadmin@ercoffeelab.id', passwordHash: '$2a$12$Hash1', role: 'SUPERADMIN', status: 'ACTIVE' },
     { name: 'Rina Keuangan', email: 'rina@ercoffeelab.id', passwordHash: '$2a$12$Hash2', role: 'SUPERADMIN', status: 'ACTIVE' },
-    { name: 'Budi Barista CBD', email: 'budi@ercoffeelab.id', passwordHash: '$2a$12$Hash3', role: 'STORE_ADMIN', status: 'ACTIVE' },
-    { name: 'Sari Barista GI', email: 'sari@ercoffeelab.id', passwordHash: '$2a$12$Hash4', role: 'STORE_ADMIN', status: 'ACTIVE' },
-    { name: 'Dani Barista Kemang', email: 'dani@ercoffeelab.id', passwordHash: '$2a$12$Hash5', role: 'STORE_ADMIN', status: 'ACTIVE' },
+    { name: 'Admin CBD Jakarta', email: 'cbd@ercoffeelab.id', passwordHash: '$2a$12$Hash3', role: 'STORE_ADMIN', status: 'ACTIVE' },
+    { name: 'Admin Grand Indonesia', email: 'gi@ercoffeelab.id', passwordHash: '$2a$12$Hash4', role: 'STORE_ADMIN', status: 'ACTIVE' },
+    { name: 'Admin Kemang', email: 'kemang@ercoffeelab.id', passwordHash: '$2a$12$Hash5', role: 'STORE_ADMIN', status: 'ACTIVE' },
+    { name: 'Admin BSD', email: 'bsd@ercoffeelab.id', passwordHash: '$2a$12$Hash6', role: 'STORE_ADMIN', status: 'ACTIVE' },
+    { name: 'Admin Bandung', email: 'bandung@ercoffeelab.id', passwordHash: '$2a$12$Hash7', role: 'STORE_ADMIN', status: 'ACTIVE' },
   ]).onConflictDoNothing();
 
   // 1.5 Branch Admins (Store Admins holding branches)
   await db.insert(schema.branchAdmins).values([
-    // Budi -> CBD, GI
+    // CBD
     { branchId: 1, adminId: 3 },
-    { branchId: 2, adminId: 3 },
-    // Sari -> BSD, Bandung
-    { branchId: 4, adminId: 4 },
-    { branchId: 5, adminId: 4 },
-    // Dani -> Kemang
+    // GI
+    { branchId: 2, adminId: 4 },
+    // Kemang
     { branchId: 3, adminId: 5 },
+    // BSD
+    { branchId: 4, adminId: 6 },
+    // Bandung
+    { branchId: 5, adminId: 7 },
   ]).onConflictDoNothing();
 
   // 2. Branches
   await db.insert(schema.branches).values([
-    { name: 'ER Coffeelab CBD Jakarta', address: 'Plaza Indonesia Lt. 3, Jakarta Pusat', latitude: '-6.1930000', longitude: '106.8220000', phone: '021-5001001', operatingHours: '07:00-22:00', status: 'OPEN', pickupEnabled: true, deliveryEnabled: true, dineinEnabled: true, deliveryRadiusKm: '5.00', taxRate: '10.00', serviceChargePct: '5.00', sortOrder: 1 },
-    { name: 'ER Coffeelab Grand Indonesia', address: 'Grand Indonesia Mall East Lt. 2, Jakarta', latitude: '-6.1950000', longitude: '106.8200000', phone: '021-5001002', operatingHours: '10:00-22:00', status: 'OPEN', pickupEnabled: true, deliveryEnabled: true, dineinEnabled: false, deliveryRadiusKm: '5.00', taxRate: '10.00', serviceChargePct: '5.00', sortOrder: 2 },
-    { name: 'ER Coffeelab Kemang', address: 'Jl. Kemang Raya No. 45, Jakarta Selatan', latitude: '-6.2610000', longitude: '106.8130000', phone: '021-5001003', operatingHours: '07:00-23:00', status: 'OPEN', pickupEnabled: true, deliveryEnabled: true, dineinEnabled: true, deliveryRadiusKm: '5.00', taxRate: '10.00', serviceChargePct: '5.00', sortOrder: 3 },
-    { name: 'ER Coffeelab BSD', address: 'The Breeze BSD City, Tangerang Selatan', latitude: '-6.3010000', longitude: '106.6530000', phone: '021-5001004', operatingHours: '08:00-22:00', status: 'OPEN', pickupEnabled: true, deliveryEnabled: true, dineinEnabled: false, deliveryRadiusKm: '5.00', taxRate: '10.00', serviceChargePct: '0.00', sortOrder: 4 },
-    { name: 'ER Coffeelab Bandung', address: 'Jl. Braga No. 12, Bandung', latitude: '-6.9175000', longitude: '107.6090000', phone: '022-4001001', operatingHours: '07:00-22:00', status: 'OPEN', pickupEnabled: true, deliveryEnabled: true, dineinEnabled: true, deliveryRadiusKm: '5.00', taxRate: '10.00', serviceChargePct: '5.00', sortOrder: 5 },
+    { name: 'ER Coffeelab CBD Jakarta', address: 'Plaza Indonesia Lt. 3, Jakarta Pusat', latitude: '-6.1930000', longitude: '106.8220000', phone: '021-5001001', operatingHours: '07:00-22:00', status: 'OPEN', pickupEnabled: true, deliveryEnabled: true, dineinEnabled: true, deliveryRadiusKm: '5.00', taxRate: '10.00', serviceChargePct: '5.00', sortOrder: 1, posKey: 'BRC-CBD1' },
+    { name: 'ER Coffeelab Grand Indonesia', address: 'Grand Indonesia Mall East Lt. 2, Jakarta', latitude: '-6.1950000', longitude: '106.8200000', phone: '021-5001002', operatingHours: '10:00-22:00', status: 'OPEN', pickupEnabled: true, deliveryEnabled: true, dineinEnabled: false, deliveryRadiusKm: '5.00', taxRate: '10.00', serviceChargePct: '5.00', sortOrder: 2, posKey: 'BRC-GDI2' },
+    { name: 'ER Coffeelab Kemang', address: 'Jl. Kemang Raya No. 45, Jakarta Selatan', latitude: '-6.2610000', longitude: '106.8130000', phone: '021-5001003', operatingHours: '07:00-23:00', status: 'OPEN', pickupEnabled: true, deliveryEnabled: true, dineinEnabled: true, deliveryRadiusKm: '5.00', taxRate: '10.00', serviceChargePct: '5.00', sortOrder: 3, posKey: 'BRC-KMG3' },
+    { name: 'ER Coffeelab BSD', address: 'The Breeze BSD City, Tangerang Selatan', latitude: '-6.3010000', longitude: '106.6530000', phone: '021-5001004', operatingHours: '08:00-22:00', status: 'OPEN', pickupEnabled: true, deliveryEnabled: true, dineinEnabled: false, deliveryRadiusKm: '5.00', taxRate: '10.00', serviceChargePct: '0.00', sortOrder: 4, posKey: 'BRC-BSD4' },
+    { name: 'ER Coffeelab Bandung', address: 'Jl. Braga No. 12, Bandung', latitude: '-6.9175000', longitude: '107.6090000', phone: '022-4001001', operatingHours: '07:00-22:00', status: 'OPEN', pickupEnabled: true, deliveryEnabled: true, dineinEnabled: true, deliveryRadiusKm: '5.00', taxRate: '10.00', serviceChargePct: '5.00', sortOrder: 5, posKey: 'BRC-BND5' },
   ]).onConflictDoNothing();
 
   // 3. Employees

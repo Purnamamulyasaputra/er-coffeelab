@@ -14,7 +14,15 @@ import { useToast } from "@/components/ui/use-toast"
 import { useRouter } from "next/navigation"
 
 function formatMoney(amount: number) {
-  return "IDR " + amount.toLocaleString("id-ID").replace(/,/g, '.')
+  return "Rp " + Number(amount).toLocaleString("id-ID").replace(/,/g, '.')
+}
+
+function getStatusVariant(status: string): any {
+  if (status === "APPROVED") return "cool"
+  if (status === "RECEIVED") return "success"
+  if (status === "SUBMITTED") return "warning"
+  if (status === "CANCELLED") return "destructive"
+  return "default"
 }
 
 export function PurchaseOrdersClient({ 
@@ -39,11 +47,8 @@ export function PurchaseOrdersClient({
     { 
       header: "Status", 
       cell: (item: any) => {
-        if (item.status === "APPROVED") {
-          return <span className="bg-muted text-[#8b5cf6] px-2 py-0.5 rounded-md text-[10px] font-bold">{item.status}</span>
-        }
         return (
-          <Badge variant={item.status === "RECEIVED" ? "success" : item.status === "SUBMITTED" ? "warning" : "secondary"}>
+          <Badge variant={getStatusVariant(item.status)}>
             {item.status}
           </Badge>
         )
@@ -123,10 +128,21 @@ export function PurchaseOrdersClient({
             <Input type="number" placeholder="Total" value={total} onChange={e => setTotal(e.target.value)} />
           </div>
         </div>
-        <DialogFooter>
-          <Button variant="secondary" onClick={() => setOpen(false)} disabled={loading}>Cancel</Button>
-          <Button variant="default" className="gap-1.5" onClick={handleSave} disabled={loading || !total}>
-            <Check size={14} /> {loading ? "Saving..." : "Save"}
+        <DialogFooter className="mt-4">
+          <Button 
+            variant="secondary" 
+            onClick={() => setOpen(false)} 
+            disabled={loading} 
+            className="bg-slate-600 hover:bg-slate-700 text-white border-0 font-medium px-6"
+          >
+            Cancel
+          </Button>
+          <Button 
+            className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-6 disabled:opacity-50 disabled:cursor-not-allowed" 
+            onClick={handleSave} 
+            disabled={loading || !total}
+          >
+            <Check size={16} /> {loading ? "Saving..." : "Save"}
           </Button>
         </DialogFooter>
       </Dialog>

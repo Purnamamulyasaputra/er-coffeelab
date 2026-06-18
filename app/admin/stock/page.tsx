@@ -1,13 +1,20 @@
 import { getBranchProductStock } from "@/lib/queries/stock"
+import { getProducts } from "@/lib/queries/products"
+import { getBranches } from "@/lib/queries/branches"
 import { StockClient } from "./stock-client"
 
-import { cookies } from "next/headers"
+import { requireAdmin } from "@/lib/auth"
 
 export default async function StockPage() {
-  const cookieStore = await cookies();
-  const selectedBranchId = cookieStore.get("selectedBranchId")?.value;
-  const branchId = selectedBranchId ? Number(selectedBranchId) : undefined;
-  const stock = await getBranchProductStock(branchId)
+  const { resolvedBranchId } = await requireAdmin()
+  const branchId = resolvedBranchId || undefined
+
   
-  return <StockClient initialData={stock} />
+  const [stock, products, branches] = await Promise.all([
+    getBranchProductStock(branchId),
+    getProducts(),
+    getBranches()
+  ])
+  
+  return <StockClient initialData={stock} products={products} branches={branches} currentBranchId={branchId} />
 }

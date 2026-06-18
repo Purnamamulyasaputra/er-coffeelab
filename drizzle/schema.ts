@@ -30,6 +30,7 @@ export const branches = pgTable('branches', {
   taxRate: numeric('tax_rate', { precision: 5, scale: 2 }).default('0.00'),
   serviceChargePct: numeric('service_charge_pct', { precision: 5, scale: 2 }).default('0.00'),
   sortOrder: integer('sort_order').default(0),
+  posKey: varchar('pos_key', { length: 50 }).unique(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
 });
 
@@ -239,12 +240,36 @@ export const storeTables = pgTable('store_tables', {
   posY: integer('pos_y').default(0),
   status: varchar('status', { length: 20 }).default('AVAILABLE'),
   currentOrderId: bigint('current_order_id', { mode: 'number' }),
+  currentSessionId: bigint('current_session_id', { mode: 'number' }),
   occupiedSince: timestamp('occupied_since', { withTimezone: true }),
   sortOrder: integer('sort_order').default(0),
 }, (table) => ({
   unq: uniqueIndex('unq_st').on(table.branchId, table.tableNumber),
   statusIdx: index('idx_store_tables_branch_status').on(table.branchId, table.status),
 }));
+
+export const tableSessions = pgTable('table_sessions', {
+  id: bigserial('id', { mode: 'number' }).primaryKey(),
+  branchId: bigint('branch_id', { mode: 'number' }).notNull().references(() => branches.id, { onDelete: 'cascade' }),
+  tableId: bigint('table_id', { mode: 'number' }).notNull().references(() => storeTables.id, { onDelete: 'cascade' }),
+  sessionDate: date('session_date').notNull().defaultNow(),
+  guestCount: integer('guest_count').default(1),
+  openedBy: bigint('opened_by', { mode: 'number' }),
+  closedBy: bigint('closed_by', { mode: 'number' }),
+  status: varchar('status', { length: 20 }).default('OPEN'),
+  paymentMethod: varchar('payment_method', { length: 50 }),
+  subtotal: bigint('subtotal', { mode: 'number' }).default(0),
+  taxAmount: bigint('tax_amount', { mode: 'number' }).default(0),
+  totalAmount: bigint('total_amount', { mode: 'number' }).default(0),
+  notes: text('notes'),
+  openedAt: timestamp('opened_at', { withTimezone: true }).defaultNow(),
+  closedAt: timestamp('closed_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+}, (table) => ({
+  branchIdx: index('idx_table_sessions_branch').on(table.branchId, table.status),
+  tableIdx: index('idx_table_sessions_table').on(table.tableId, table.status),
+}));
+
 // 2.5 Inventory & Procurement
 export const ingredients = pgTable('ingredients', {
   id: bigserial('id', { mode: 'number' }).primaryKey(),
@@ -425,6 +450,7 @@ export const orders = pgTable('orders', {
   deliveryAddressId: bigint('delivery_address_id', { mode: 'number' }).references(() => customerAddresses.id, { onDelete: 'set null' }),
   tableId: bigint('table_id', { mode: 'number' }), // FK added later
   tableNumber: varchar('table_number', { length: 10 }),
+  tableSessionId: bigint('table_session_id', { mode: 'number' }),
   shiftId: bigint('shift_id', { mode: 'number' }), // FK added later
   employeeId: bigint('employee_id', { mode: 'number' }).references(() => employees.id, { onDelete: 'set null' }),
   isPos: boolean('is_pos').default(false),

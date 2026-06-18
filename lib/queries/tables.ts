@@ -1,17 +1,30 @@
 import { sql } from "@/lib/db"
 
 export async function getTables(branchId: number) {
-  // Returns store_tables with their current occupied order if any
+  // Returns store_tables with their current open session if any
   return await sql`
     SELECT 
       t.*,
-      o.id as current_order_id,
-      o.invoice_code,
-      o.created_at as occupied_since
+      ts.guest_count,
+      ts.opened_at as occupied_since
     FROM store_tables t
-    LEFT JOIN orders o ON o.table_id = t.id AND o.status IN ('PENDING', 'PROCESSING')
+    LEFT JOIN table_sessions ts ON ts.id = t.current_session_id AND ts.status = 'OPEN'
     WHERE t.branch_id = ${branchId}
     ORDER BY t.section, t.table_number
+  `
+}
+
+export async function getAllTables() {
+  return await sql`
+    SELECT 
+      t.*,
+      b.name as branch_name,
+      ts.guest_count,
+      ts.opened_at as occupied_since
+    FROM store_tables t
+    JOIN branches b ON b.id = t.branch_id
+    LEFT JOIN table_sessions ts ON ts.id = t.current_session_id AND ts.status = 'OPEN'
+    ORDER BY b.name, t.section, t.table_number
   `
 }
 
@@ -32,6 +45,8 @@ export async function updateTableStatus(id: number, status: string) {
     RETURNING *
   `
 }
+
+
 
 export async function createTable(data: {
   branchId: number

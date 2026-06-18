@@ -15,7 +15,7 @@ interface ToastContextType {
   toast: (msg: string, type?: ToastType) => void
 }
 
-const ToastContext = React.createContext<ToastContextType>({ toast: () => {} })
+const ToastContext = React.createContext<ToastContextType>({ toast: () => { } })
 
 export function useToast() {
   return React.useContext(ToastContext)
@@ -26,7 +26,8 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 
   const toast = React.useCallback((msg: string, type: ToastType = "info") => {
     const id = Date.now()
-    setToasts((prev) => [...prev, { id, msg, type }])
+    // Hanya tampilkan 1 toast pada satu waktu
+    setToasts([{ id, msg, type }])
     setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== id))
     }, 3000)
@@ -40,8 +41,8 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
           const bg = t.type === "error" ? "bg-destructive" : t.type === "success" ? "bg-success" : "bg-primary"
           const Icon = t.type === "error" ? AlertTriangle : t.type === "success" ? Check : Info
           return (
-            <div 
-              key={t.id} 
+            <div
+              key={t.id}
               className={`${bg} text-white px-5 py-3 rounded-2xl flex items-center justify-between gap-3 text-[15px] font-semibold shadow-xl min-w-[280px] max-w-[400px] animate-in slide-in-from-bottom-5 fade-in duration-300`}
             >
               <div className="flex items-center gap-3">

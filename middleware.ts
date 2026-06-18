@@ -9,7 +9,7 @@ async function verifyTokenEdge(token: string) {
   try {
     const { payload } = await jwtVerify(token, SECRET_KEY)
     return payload
-  } catch (error) {
+  } catch {
     return null
   }
 }
@@ -17,27 +17,28 @@ async function verifyTokenEdge(token: string) {
 export default async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname
 
+  // Proteksi semua route /admin/*
   if (path.startsWith("/admin")) {
     const token = request.cookies.get("admin_token")?.value
     if (!token) {
       return NextResponse.redirect(new URL("/login", request.url))
     }
-
-    const payload = await verifyTokenEdge(token)
+    
+    const payload = await verifyTokenEdge(token) as any
     if (!payload) {
       return NextResponse.redirect(new URL("/login", request.url))
     }
-  }
 
-  if (path.startsWith("/pos") && path !== "/pos/login") {
-    const token = request.cookies.get("pos_token")?.value
-    if (!token) {
-      return NextResponse.redirect(new URL("/pos/login", request.url))
+    // Blokir STORE_ADMIN dari halaman SYSTEM
+    const systemPaths = ['/admin/payments', '/admin/content', '/admin/reports', '/admin/users', '/admin/taxconfig']
+    if (payload.role === 'STORE_ADMIN' && systemPaths.some(p => path.startsWith(p))) {
+      return NextResponse.redirect(new URL("/admin/dashboard", request.url))
     }
 
-    const payload = await verifyTokenEdge(token)
-    if (!payload) {
-      return NextResponse.redirect(new URL("/pos/login", request.url))
+    // Blokir akses ke halaman employees & attendance & notifications untuk STORE_ADMIN
+    const restrictedPaths = ['/admin/employees', '/admin/attendance', '/admin/notifications']
+    if (payload.role === 'STORE_ADMIN' && restrictedPaths.some(p => path.startsWith(p))) {
+      return NextResponse.redirect(new URL("/admin/dashboard", request.url))
     }
   }
 
@@ -45,5 +46,5 @@ export default async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/pos/:path*"],
+  matcher: ["/admin/:path*"],
 }

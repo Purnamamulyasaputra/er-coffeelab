@@ -1,6 +1,24 @@
 import { sql } from "@/lib/db"
 
-export async function getRefunds() {
+export async function getRefunds(branchId?: number) {
+  if (branchId) {
+    return await sql`
+      SELECT 
+        r.id, 
+        o.invoice_code as order, 
+        r.refund_type as type, 
+        r.refund_amount as amount, 
+        r.reason, 
+        r.refund_method as method, 
+        r.status, 
+        a.name as by
+      FROM refunds r
+      LEFT JOIN orders o ON r.order_id = o.id
+      LEFT JOIN admins a ON r.approved_by = a.id
+      WHERE o.branch_id = ${branchId}
+      ORDER BY r.created_at DESC
+    `
+  }
   return await sql`
     SELECT 
       r.id, 

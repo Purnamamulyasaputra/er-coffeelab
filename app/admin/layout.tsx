@@ -7,8 +7,16 @@ import { Header } from "@/components/admin/header"
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = React.useState(true)
   const [isMobile, setIsMobile] = React.useState(false)
-  const [isDark, setIsDark] = React.useState(true)
+  const [isDark, setIsDark] = React.useState(false)
   const [mounted, setMounted] = React.useState(false)
+  const [session, setSession] = React.useState<{role: string, name: string, email: string} | null>(null)
+
+  React.useEffect(() => {
+    fetch('/api/auth/session')
+      .then(r => r.json())
+      .then(setSession)
+      .catch(() => {})
+  }, [])
 
   React.useEffect(() => {
     const handleResize = () => {
@@ -23,9 +31,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     
     // Check local storage for theme
     const savedTheme = localStorage.getItem("theme")
-    if (savedTheme === "light") {
+    if (savedTheme === "dark") {
       // eslint-disable-next-line
-      setIsDark(false)
+      setIsDark(true)
     }
     // eslint-disable-next-line
     setMounted(true)
@@ -53,7 +61,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         />
       )}
       
-      <Sidebar open={open} setOpen={setOpen} isMobile={isMobile} />
+      <Sidebar 
+        open={open} 
+        setOpen={setOpen} 
+        isMobile={isMobile} 
+        role={session?.role}
+        userName={session?.name}
+        userEmail={session?.email}
+      />
       
       <div className="flex-1 flex flex-col min-w-0">
         <Header 
@@ -61,6 +76,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           isDark={isDark} 
           toggleTheme={() => setIsDark(!isDark)} 
           open={open}
+          role={session?.role}
         />
         <main className="flex-1 p-3 sm:p-6 overflow-y-auto">
           {children}

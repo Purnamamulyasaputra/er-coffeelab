@@ -5,7 +5,9 @@ import { Plus, Pencil, Trash2, X, GripVertical } from "lucide-react"
 import { PageHeader } from "@/components/shared/page-header"
 import { DataTable } from "@/components/shared/data-table"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import { useRouter } from "next/navigation"
+import { ConfirmationModal } from "@/components/ui/confirmation-modal"
 
 export function ContentClient({ initialStaticPages, initialMerchandise }: { initialStaticPages: any[], initialMerchandise: any[] }) {
   const router = useRouter()
@@ -174,13 +176,9 @@ export function ContentClient({ initialStaticPages, initialMerchandise }: { init
     { 
       header: "Status", 
       cell: (item: any) => (
-        <span className={`px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wider ${
-          item.status === 'ACTIVE' ? 'bg-[#22c55e]/20 text-[#22c55e]' : 
-          item.status === 'SOLD_OUT' ? 'bg-[#f59e0b]/20 text-[#f59e0b]' : 
-          'bg-[#ef4444]/20 text-[#ef4444]'
-        }`}>
+        <Badge variant={item.status === 'ACTIVE' ? 'success' : item.status === 'SOLD_OUT' ? 'warning' : 'destructive'}>
           {item.status}
-        </span>
+        </Badge>
       )
     },
     {
@@ -324,20 +322,15 @@ export function ContentClient({ initialStaticPages, initialMerchandise }: { init
         </div>
       )}
 
-      {/* Delete Confirmation Modal */}
-      {deleteConfirmInfo && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs transition-opacity" onClick={() => setDeleteConfirmInfo(null)}>
-          <div className="bg-card rounded-[16px] w-full max-w-[340px] p-6 flex flex-col items-center text-center shadow-2xl border border-border" onClick={e => e.stopPropagation()}>
-            <div className="w-14 h-14 rounded-full bg-[#ef4444]/10 flex items-center justify-center mb-4 border border-[#ef4444]/20"><Trash2 className="text-[#ef4444] w-6 h-6" /></div>
-            <h3 className="text-[18px] font-semibold text-foreground mb-2">Confirm Delete</h3>
-            <p className="text-muted-foreground text-[13px] mb-6 leading-relaxed">Are you sure you want to delete this {deleteConfirmInfo.type === 'page' ? 'static page' : 'merchandise item'}?</p>
-            <div className="flex w-full gap-3">
-              <Button variant="ghost" onClick={() => setDeleteConfirmInfo(null)} className="flex-1 bg-muted text-foreground hover:bg-muted/80 rounded-xl h-11 text-[13px] font-medium border border-border">Cancel</Button>
-              <Button onClick={confirmDelete} disabled={loading} className="flex-1 bg-[#ef4444] text-white hover:bg-[#dc2626] rounded-xl h-11 text-[13px] font-medium shadow-[0_4px_12px_rgba(239,68,68,0.25)]">{loading ? 'Deleting...' : 'Delete'}</Button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmationModal 
+        isOpen={deleteConfirmInfo !== null}
+        onClose={() => setDeleteConfirmInfo(null)}
+        onConfirm={confirmDelete}
+        type="danger"
+        title="Confirm Delete"
+        message={`Are you sure you want to delete this ${deleteConfirmInfo?.type === 'page' ? 'static page' : 'merchandise item'}?`}
+        confirmText={loading ? 'Deleting...' : 'Delete'}
+      />
     </div>
   )
 }

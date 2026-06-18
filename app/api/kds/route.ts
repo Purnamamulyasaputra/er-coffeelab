@@ -7,7 +7,18 @@ export async function GET(request: NextRequest) {
     const session = await getSession("pos") || await getSession("admin");
     const url = new URL(request.url);
     const branchIdStr = url.searchParams.get("branchId");
-    const branchId = branchIdStr ? Number(branchIdStr) : (Number((session as any)?.branchId) || 1);
+    
+    // If branchId param is provided, use it. Otherwise check session. 
+    // If neither → undefined means "all branches"
+    let branchId: number | undefined;
+    if (branchIdStr && branchIdStr !== "all") {
+      branchId = Number(branchIdStr);
+    } else if (!branchIdStr && session) {
+      // No param provided — check if POS session has a branch
+      const sessionBranch = (session as any)?.branchId;
+      if (sessionBranch) branchId = Number(sessionBranch);
+    }
+    // If branchId is still undefined → returns all branches
     
     const data = await getActiveKdsOrders(branchId);
     return NextResponse.json({ data });

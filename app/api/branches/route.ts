@@ -1,5 +1,14 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createBranch, updateBranch } from "@/lib/queries/branches"
+import { createBranch, updateBranch, getBranches } from "@/lib/queries/branches"
+
+export async function GET() {
+  try {
+    const data = await getBranches()
+    return NextResponse.json({ data })
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {

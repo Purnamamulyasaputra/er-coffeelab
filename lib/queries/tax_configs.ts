@@ -1,6 +1,21 @@
 import { sql } from "@/lib/db"
 
-export async function getTaxConfigs() {
+export async function getTaxConfigs(branchId?: number) {
+  if (branchId) {
+    return await sql`
+      SELECT 
+        t.id, 
+        b.name as branch, 
+        t.tax_name as tax, 
+        t.tax_rate::text || '%' as rate, 
+        CASE WHEN t.is_inclusive THEN 'Yes' ELSE 'No' END as inclusive, 
+        CASE WHEN t.is_active THEN 'ON' ELSE 'OFF' END as active
+      FROM tax_configs t
+      JOIN branches b ON t.branch_id = b.id
+      WHERE t.branch_id = ${branchId}
+      ORDER BY b.name ASC, t.tax_name ASC
+    `
+  }
   return await sql`
     SELECT 
       t.id, 

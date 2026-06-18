@@ -64,11 +64,31 @@ interface SidebarProps {
   open: boolean;
   setOpen: (v: boolean) => void;
   isMobile: boolean;
+  role?: string;
+  userName?: string;
+  userEmail?: string;
 }
 
-export function Sidebar({ open, setOpen, isMobile }: SidebarProps) {
+export function Sidebar({ open, setOpen, isMobile, role, userName, userEmail }: SidebarProps) {
   const pathname = usePathname();
   
+  // Filter menu based on role
+  const filteredGR = React.useMemo(() => {
+    return GR.map(group => {
+      if (role === "STORE_ADMIN") {
+        if (group.label === "SYSTEM") return null;
+        
+        const filteredItems = group.items.filter(item => 
+          !["employees", "attendance", "notifications", "taxconfig"].includes(item.id)
+        );
+        
+        if (filteredItems.length === 0) return null;
+        return { ...group, items: filteredItems };
+      }
+      return group;
+    }).filter(Boolean);
+  }, [role]);
+
   return (
     <div 
       className={cn(
@@ -77,15 +97,20 @@ export function Sidebar({ open, setOpen, isMobile }: SidebarProps) {
         isMobile ? (open ? "w-[260px]" : "w-0 -translate-x-full") : (open ? "w-[240px]" : "w-[58px]")
       )}
     >
-      <div className="flex items-center gap-2.5 p-2.5 border-b border-sidebar-border shrink-0 h-12">
+      <div className="flex items-center gap-2.5 px-3 py-3 border-b border-sidebar-border shrink-0 min-h-[60px]">
         {open || isMobile ? (
-          <div className="flex-1 flex items-center justify-between">
-            <div className="relative h-7 flex items-center">
-              <img src="/logo-light.png" alt="ER COFFEELAB" className="h-6 w-auto block dark:hidden" />
-              <img src="/logo-dark.png" alt="ER COFFEELAB" className="h-6 w-auto hidden dark:block" />
+          <div className="flex-1 flex items-center justify-between overflow-hidden">
+            <div className="flex flex-col justify-center">
+              <div className="flex items-center gap-2">
+                <img src="/logo-light.png" alt="ER COFFEELAB" className="h-8 w-auto block dark:hidden" />
+                <img src="/logo-dark.png" alt="ER COFFEELAB" className="h-8 w-auto hidden dark:block" />
+                <div className="bg-brand-blue/10 border border-brand-blue/20 text-brand-blue dark:bg-blue-500/20 dark:border-blue-500/30 dark:text-blue-400 px-1.5 py-0.5 rounded text-[9px] font-extrabold uppercase tracking-widest whitespace-nowrap mt-0.5">
+                  {role === "SUPERADMIN" ? "Super Admin" : "Admin Outlet"}
+                </div>
+              </div>
             </div>
-            <button onClick={() => setOpen(false)} className="text-sidebar-muted hover:text-sidebar-foreground shrink-0">
-              <X size={15} />
+            <button onClick={() => setOpen(false)} className="text-sidebar-muted hover:text-sidebar-foreground shrink-0 ml-2">
+              <X size={16} />
             </button>
           </div>
         ) : (
@@ -98,14 +123,14 @@ export function Sidebar({ open, setOpen, isMobile }: SidebarProps) {
       </div>
 
       <div className="flex-1 overflow-y-auto py-1 scrollbar-thin">
-        {GR.map((group, i) => (
+        {filteredGR.map((group: any, i) => (
           <div key={i} className="mb-2">
             {(open || isMobile) && (
               <div className="px-4 py-2 text-[10px] font-extrabold tracking-[1.5px] text-sidebar-muted">
                 {group.label}
               </div>
             )}
-            {group.items.map(item => {
+            {group.items.map((item: any) => {
               const active = pathname.startsWith(item.href);
               const Icon = item.icon || Circle;
               return (
@@ -133,12 +158,12 @@ export function Sidebar({ open, setOpen, isMobile }: SidebarProps) {
       <div className="p-2 border-t border-sidebar-border shrink-0">
         {(open || isMobile) && (
           <div className="flex items-center gap-2 p-1.5">
-            <div className="w-7 h-7 rounded-full bg-brand-blue flex items-center justify-center font-bold text-[11px] text-brand-blue-foreground shrink-0">
-              SA
+            <div className="w-7 h-7 rounded-full bg-brand-blue flex items-center justify-center font-bold text-[11px] text-brand-blue-foreground shrink-0 uppercase">
+              {userName ? userName.slice(0,2) : "AD"}
             </div>
             <div className="overflow-hidden">
-              <div className="text-[11px] font-semibold truncate">{`Super Admin`}</div>
-              <div className="text-[9px] text-sidebar-muted truncate">{`ahmad@ercoffeelab.id`}</div>
+              <div className="text-[11px] font-semibold truncate">{userName || "Admin"}</div>
+              <div className="text-[9px] text-sidebar-muted truncate">{role === "SUPERADMIN" ? "Super Admin" : "Store Admin"} • {userEmail || ""}</div>
             </div>
           </div>
         )}

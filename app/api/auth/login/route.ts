@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Email and password are required" }, { status: 400 })
     }
 
-    // Special logic for testing: Auto-create superadmin@ercoffeelab.id / admin123 if it doesn't exist
+    // Special logic for testing: Auto-create superadmin if it doesn't exist
     if (email === "superadmin@ercoffeelab.id" && password === "admin123") {
       const existing = await sql`SELECT id FROM admins WHERE email = ${email}`
       if (existing.length === 0) {
@@ -23,14 +23,30 @@ export async function POST(request: NextRequest) {
       }
     }
     
-    // Special logic for testing Admin Outlet: storeadmin@ercoffeelab.id / admin123
-    if (email === "storeadmin@ercoffeelab.id" && password === "admin123") {
+    // Auto-seed STORE_ADMIN accounts for branches
+    const outletAccounts = [
+      { email: 'cbd@ercoffeelab.id', name: 'Admin CBD', branchId: 1 },
+      { email: 'gi@ercoffeelab.id', name: 'Admin Grand Indonesia', branchId: 2 },
+      { email: 'kemang@ercoffeelab.id', name: 'Admin Kemang', branchId: 3 },
+      { email: 'bsd@ercoffeelab.id', name: 'Admin BSD', branchId: 4 },
+      { email: 'bandung@ercoffeelab.id', name: 'Admin Bandung', branchId: 5 },
+    ]
+    
+    const matchedAccount = outletAccounts.find(acc => acc.email === email && password === "login123")
+    if (matchedAccount) {
       const existing = await sql`SELECT id FROM admins WHERE email = ${email}`
       if (existing.length === 0) {
         const hash = await bcrypt.hash(password, 10)
-        await sql`
+        const inserted = await sql`
           INSERT INTO admins (name, email, password_hash, role, status)
-          VALUES ('Admin Outlet', ${email}, ${hash}, 'STORE_ADMIN', 'ACTIVE')
+          VALUES (${matchedAccount.name}, ${email}, ${hash}, 'STORE_ADMIN', 'ACTIVE')
+          RETURNING id
+        `
+        const adminId = inserted[0].id
+        // Link to branch
+        await sql`
+          INSERT INTO branch_admins (branch_id, admin_id)
+          VALUES (${matchedAccount.branchId}, ${adminId})
         `
       }
     }
@@ -51,20 +67,31 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid credentials" }, { status: 401 })
     }
 
+    // Get branchId if STORE_ADMIN
+    let branchId: number | null = null
+    if (user.role === 'STORE_ADMIN') {
+      const branchLink = await sql`
+        SELECT branch_id FROM branch_admins 
+        WHERE admin_id = ${user.id} 
+        LIMIT 1
+      `
+      branchId = branchLink[0]?.branch_id ?? null
+    }
+
     // Issue JWT
     const payload = {
       sub: user.id.toString(),
       name: user.name,
       email: user.email,
       role: user.role,
+      branchId: branchId,
       type: "admin"
     }
 
     const token = await signToken(payload)
     await setAuthCookie(token, "admin")
 
-    const redirectUrl = user.role === 'SUPERADMIN' ? "/admin/dashboard" : "/pos"
-    return NextResponse.json({ success: true, redirect: redirectUrl, role: user.role })
+    return NextResponse.json({ success: true, redirect: "/admin/dashboard", role: user.role })
   } catch (error: any) {
     console.error("Login error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })

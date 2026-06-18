@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/shared/page-header"
 import { DataTable } from "@/components/shared/data-table"
 import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
+import { ConfirmationModal } from "@/components/ui/confirmation-modal"
 
 export function PaymentsClient({ initialData }: { initialData: any[] }) {
   const router = useRouter()
@@ -326,42 +327,15 @@ export function PaymentsClient({ initialData }: { initialData: any[] }) {
         </div>
       )}
 
-      {/* Delete Confirmation Modal */}
-      {deleteConfirmId !== null && (
-        <div 
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs transition-opacity"
-          onClick={() => setDeleteConfirmId(null)}
-        >
-          <div 
-            className="bg-card rounded-[16px] w-full max-w-[340px] p-6 flex flex-col items-center text-center shadow-2xl border border-border"
-            onClick={e => e.stopPropagation()}
-          >
-            <div className="w-14 h-14 rounded-full bg-[#ef4444]/10 flex items-center justify-center mb-4 border border-[#ef4444]/20">
-              <Trash2 className="text-[#ef4444] w-6 h-6" />
-            </div>
-            <h3 className="text-[18px] font-semibold text-foreground mb-2">Delete Payment Method</h3>
-            <p className="text-muted-foreground text-[13px] mb-6 leading-relaxed">
-              Are you sure you want to delete this payment method?
-            </p>
-            <div className="flex w-full gap-3">
-              <Button 
-                variant="ghost" 
-                onClick={() => setDeleteConfirmId(null)} 
-                className="flex-1 bg-muted text-foreground hover:bg-muted/80 rounded-xl h-11 text-[13px] font-medium border border-border"
-              >
-                Cancel
-              </Button>
-              <Button 
-                onClick={confirmDelete} 
-                disabled={loading} 
-                className="flex-1 bg-destructive text-white hover:bg-destructive/90 rounded-xl h-11 text-[13px] font-medium shadow-[0_4px_12px_rgba(239,68,68,0.25)]"
-              >
-                {loading ? 'Deleting...' : 'Delete'}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmationModal 
+        isOpen={deleteConfirmId !== null}
+        onClose={() => setDeleteConfirmId(null)}
+        onConfirm={confirmDelete}
+        type="danger"
+        title="Delete Payment Method"
+        message="Are you sure you want to delete this payment method?"
+        confirmText={loading ? 'Deleting...' : 'Delete'}
+      />
     </div>
   )
 }

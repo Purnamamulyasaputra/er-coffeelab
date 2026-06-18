@@ -13,9 +13,10 @@ interface DataTableProps<T> {
   data: T[]
   keyExtractor: (item: T) => string | number
   emptyMessage?: string
+  dense?: boolean
 }
 
-export function DataTable<T>({ columns, data, keyExtractor, emptyMessage = "No results." }: DataTableProps<T>) {
+export function DataTable<T>({ columns, data, keyExtractor, emptyMessage = "No results.", dense = false }: DataTableProps<T>) {
   const [showFilters, setShowFilters] = React.useState(false)
   const [rowsPerPage, setRowsPerPage] = React.useState(8)
   const [currentPage, setCurrentPage] = React.useState(1)
@@ -40,7 +41,7 @@ export function DataTable<T>({ columns, data, keyExtractor, emptyMessage = "No r
         const filterVal = columnFilters[col.header];
         if (filterVal) {
           const itemVal = col.accessorKey ? item[col.accessorKey] : (item as any)[col.header.toLowerCase()];
-          if (!String(itemVal || "").toLowerCase().includes(filterVal.toLowerCase())) {
+          if (!String(itemVal ?? "").toLowerCase().includes(filterVal.toLowerCase())) {
             return false;
           }
         }
@@ -142,7 +143,7 @@ export function DataTable<T>({ columns, data, keyExtractor, emptyMessage = "No r
             <TableHeader>
               <TableRow className="bg-muted/50 border-b border-border">
                 {columns.map((col, i) => (
-                  <TableHead key={i} className="text-[13px] font-bold text-muted-foreground py-2 px-4 h-auto select-none">
+                  <TableHead key={i} className={`font-bold text-muted-foreground h-auto select-none ${dense ? 'text-[11px] py-1.5 px-2' : 'text-[13px] py-2 px-4'}`}>
                     <div 
                       className={`flex items-center gap-1.5 ${col.header !== "Actions" ? 'cursor-pointer hover:text-foreground transition-colors' : ''}`}
                       onClick={() => {
@@ -178,8 +179,8 @@ export function DataTable<T>({ columns, data, keyExtractor, emptyMessage = "No r
                 currentData.map((item, index) => (
                   <TableRow key={keyExtractor(item)} className="border-b border-border/50 hover:bg-muted/50 transition-colors">
                     {columns.map((col, i) => (
-                      <TableCell key={i} className="py-2 px-4 text-[13px] font-medium">
-                        {col.cell ? col.cell(item, startIndex + index) : String(item[col.accessorKey as keyof T] || "")}
+                      <TableCell key={i} className={`font-medium ${dense ? 'py-1.5 px-2 text-[11px]' : 'py-2 px-4 text-[13px]'}`}>
+                        {col.cell ? col.cell(item, startIndex + index) : String(item[col.accessorKey as keyof T] ?? "")}
                       </TableCell>
                     ))}
                   </TableRow>

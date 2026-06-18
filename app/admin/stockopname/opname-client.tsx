@@ -105,10 +105,21 @@ export function StockOpnameClient({
             <Select options={employeeOptions} value={employeeId} onChange={e => setEmployeeId(e.target.value)} />
           </div>
         </div>
-        <DialogFooter>
-          <Button variant="secondary" onClick={() => setOpen(false)} disabled={loading}>Cancel</Button>
-          <Button variant="default" className="gap-1.5" onClick={handleSave} disabled={loading}>
-            <Check size={14} /> {loading ? "Saving..." : "Start Opname"}
+        <DialogFooter className="mt-4">
+          <Button 
+            variant="secondary" 
+            onClick={() => setOpen(false)} 
+            disabled={loading} 
+            className="bg-slate-600 hover:bg-slate-700 text-white border-0 font-medium px-6"
+          >
+            Cancel
+          </Button>
+          <Button 
+            className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-6 disabled:opacity-50 disabled:cursor-not-allowed" 
+            onClick={handleSave} 
+            disabled={loading}
+          >
+            <Check size={16} /> {loading ? "Saving..." : "Start Opname"}
           </Button>
         </DialogFooter>
       </Dialog>

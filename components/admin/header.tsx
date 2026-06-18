@@ -5,15 +5,17 @@ import { Menu, Sun, Moon, AlertTriangle } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { Dialog } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
+import { mutate } from "swr"
 
 interface HeaderProps {
   toggleSidebar: () => void;
   isDark: boolean;
   toggleTheme: () => void;
   open?: boolean;
+  role?: string;
 }
 
-export function Header({ toggleSidebar, isDark, toggleTheme, open }: HeaderProps) {
+export function Header({ toggleSidebar, isDark, toggleTheme, open, role }: HeaderProps) {
   const [logoutOpen, setLogoutOpen] = React.useState(false)
   const [isLoggingOut, setIsLoggingOut] = React.useState(false)
 
@@ -39,6 +41,8 @@ export function Header({ toggleSidebar, isDark, toggleTheme, open }: HeaderProps
     setCurrentBranch(newBranch);
     const { setBranchCookie } = await import("@/app/actions/branch");
     await setBranchCookie(newBranch);
+    mutate("/api/dashboard");
+    mutate("/api/kds?branchId=1"); // Also revalidate KDS just in case
     router.refresh();
   };
 
@@ -56,18 +60,20 @@ export function Header({ toggleSidebar, isDark, toggleTheme, open }: HeaderProps
 
         <div className="flex-1" />
 
-        <select 
-          value={currentBranch}
-          onChange={handleBranchChange}
-          className="px-2 py-1.5 rounded-lg border border-border bg-muted text-foreground text-xs focus:outline-none focus:ring-2 focus:ring-brand-blue cursor-pointer"
-        >
-          <option value="all">All Branches</option>
-          <option value="1">CBD</option>
-          <option value="2">GI</option>
-          <option value="3">Kemang</option>
-          <option value="4">BSD</option>
-          <option value="5">Bandung</option>
-        </select>
+        {role === "SUPERADMIN" && (
+          <select 
+            value={currentBranch}
+            onChange={handleBranchChange}
+            className="px-2 py-1.5 rounded-lg border border-border bg-muted text-foreground text-xs focus:outline-none focus:ring-2 focus:ring-brand-blue cursor-pointer"
+          >
+            <option value="all">All Branches</option>
+            <option value="1">CBD</option>
+            <option value="2">GI</option>
+            <option value="3">Kemang</option>
+            <option value="4">BSD</option>
+            <option value="5">Bandung</option>
+          </select>
+        )}
 
         <button
           type="button"

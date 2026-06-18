@@ -13,7 +13,7 @@ export async function getBranchProductStock(branchId?: number) {
       JOIN products p ON bps.product_id = p.id
       JOIN branches b ON bps.branch_id = b.id
       WHERE bps.branch_id = ${branchId}
-      ORDER BY p.name ASC, b.name ASC
+      ORDER BY bps.id ASC
     `
   }
 
@@ -27,6 +27,28 @@ export async function getBranchProductStock(branchId?: number) {
     FROM branch_product_stock bps
     JOIN products p ON bps.product_id = p.id
     JOIN branches b ON bps.branch_id = b.id
-    ORDER BY p.name ASC, b.name ASC
+    ORDER BY bps.id ASC
+  `
+}
+
+export async function updateBranchProductStock(id: number, stockStatus: string) {
+  return await sql`
+    UPDATE branch_product_stock
+    SET stock_status = ${stockStatus}, updated_at = NOW()
+    WHERE id = ${id}
+  `
+}
+
+export async function deleteBranchProductStock(id: number) {
+  return await sql`
+    DELETE FROM branch_product_stock WHERE id = ${id}
+  `
+}
+
+export async function createBranchProductStock(branchId: number, productId: number, stockStatus: string) {
+  return await sql`
+    INSERT INTO branch_product_stock (branch_id, product_id, stock_status)
+    VALUES (${branchId}, ${productId}, ${stockStatus})
+    RETURNING id
   `
 }

@@ -7,8 +7,9 @@ export async function getShifts(branchId?: number) {
         s.id, 
         e.name as emp, 
         b.name as branch, 
-        to_char(s.opened_at, 'HH24:MI') as open,
-        COALESCE(to_char(s.closed_at, 'HH24:MI'), '-') as close,
+        to_char(s.opened_at AT TIME ZONE 'Asia/Jakarta', 'HH24:MI') as open,
+        COALESCE(to_char(s.closed_at AT TIME ZONE 'Asia/Jakarta', 'HH24:MI'), '-') as close,
+        s.opening_cash as starting,
         s.actual_cash as sales, 
         s.total_orders as orders,
         COALESCE(s.cash_difference::text, '-') as diff,
@@ -26,8 +27,9 @@ export async function getShifts(branchId?: number) {
       s.id, 
       e.name as emp, 
       b.name as branch, 
-      to_char(s.opened_at, 'HH24:MI') as open,
-      COALESCE(to_char(s.closed_at, 'HH24:MI'), '-') as close,
+      to_char(s.opened_at AT TIME ZONE 'Asia/Jakarta', 'HH24:MI') as open,
+      COALESCE(to_char(s.closed_at AT TIME ZONE 'Asia/Jakarta', 'HH24:MI'), '-') as close,
+      s.opening_cash as starting,
       s.actual_cash as sales, 
       s.total_orders as orders,
       COALESCE(s.cash_difference::text, '-') as diff,
@@ -53,4 +55,60 @@ export async function createShift(data: {
     )
     RETURNING id
   `
+}
+
+export async function closeShift(id: number, actualCash: number) {
+  // Get the shift to calculate difference
+  const shift = await sql`SELECT expected_cash FROM shifts WHERE id = ${id}`;
+  if (!shift.length) throw new Error("Shift not found");
+  
+  const expectedCash = Number(shift[0].expected_cash);
+  const diff = actualCash - expectedCash;
+  
+  return await sql`
+    UPDATE shifts
+    SET 
+      closed_at = NOW(),
+      actual_cash = ${actualCash},
+      cash_difference = ${diff},
+      status = 'CLOSED'
+    WHERE id = ${id}
+    RETURNING id
+  `;
+}
+
+export async function updateShift(id: number, actualCash: number, status: string, startingCash?: number) {
+  const shift = await sql`SELECT expected_cash FROM shifts WHERE id = ${id}`;
+  if (!shift.length) throw new Error("Shift not found");
+  
+  if (status === 'OPEN') {
+    return await sql`
+      UPDATE shifts
+      SET 
+        closed_at = NULL,
+        actual_cash = NULL,
+        cash_difference = NULL,
+        status = 'OPEN',
+        opening_cash = COALESCE(${startingCash ?? null}, opening_cash),
+        expected_cash = COALESCE(${startingCash ?? null}, expected_cash)
+      WHERE id = ${id}
+      RETURNING id
+    `;
+  } else {
+    const expectedCash = Number(shift[0].expected_cash);
+    const diff = actualCash - expectedCash;
+    return await sql`
+      UPDATE shifts
+      SET 
+        actual_cash = ${actualCash},
+        cash_difference = ${diff},
+        status = 'CLOSED'
+      WHERE id = ${id}
+      RETURNING id
+    `;
+  }
+}
+
+export async function deleteShift(id: number) {
+  return await sql`DELETE FROM shifts WHERE id = ${id} RETURNING id`;
 }

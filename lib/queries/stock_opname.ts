@@ -1,6 +1,23 @@
 import { sql } from "@/lib/db"
 
-export async function getStockOpnames() {
+export async function getStockOpnames(branchId?: number) {
+  if (branchId) {
+    return await sql`
+      SELECT 
+        so.id, 
+        b.name as branch, 
+        e.name as employee, 
+        to_char(so.created_at, 'Mon DD') as date,
+        (SELECT COUNT(id) FROM stock_opname_items WHERE stock_opname_id = so.id)::text as items,
+        '-' as variance,
+        so.status
+      FROM stock_opnames so
+      LEFT JOIN branches b ON so.branch_id = b.id
+      LEFT JOIN employees e ON so.employee_id = e.id
+      WHERE so.branch_id = ${branchId}
+      ORDER BY so.created_at DESC
+    `
+  }
   return await sql`
     SELECT 
       so.id, 

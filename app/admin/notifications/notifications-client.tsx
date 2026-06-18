@@ -5,7 +5,10 @@ import { Plus, Send, Pencil, Trash2, X, MessageSquare, Image as ImageIcon, Link 
 import { PageHeader } from "@/components/shared/page-header"
 import { DataTable } from "@/components/shared/data-table"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/components/ui/use-toast"
+import { Switch } from "@/components/ui/switch"
+import { formatStatus } from "@/lib/utils"
 import { useRouter } from "next/navigation"
 
 export function NotificationsClient({ initialData }: { initialData: any[] }) {
@@ -123,11 +126,9 @@ export function NotificationsClient({ initialData }: { initialData: any[] }) {
     { 
       header: "Status", 
       cell: (item: any) => (
-        <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold tracking-wider ${
-          item.active ? 'bg-[#22c55e]/20 text-[#22c55e]' : 'bg-[#ef4444]/20 text-[#ef4444]'
-        }`}>
+        <Badge variant={item.active ? 'success' : 'destructive'}>
           {item.active ? 'ACTIVE' : 'INACTIVE'}
-        </span>
+        </Badge>
       )
     },
     {
@@ -177,6 +178,31 @@ export function NotificationsClient({ initialData }: { initialData: any[] }) {
                 </select>
               </div>
               <div>
+                <label className="block text-[12px] font-medium text-muted-foreground mb-1.5">Load from Template (Optional)</label>
+                <select 
+                  onChange={e => {
+                    const val = e.target.value;
+                    if (!val) {
+                      setBcTitle("")
+                      setBcBody("")
+                      return
+                    }
+                    const t = data.find((d: any) => String(d.id) === String(val))
+                    if (t) {
+                      setBcTitle(formatStatus(t.name) || "")
+                      setBcBody(t.body_template || "")
+                    }
+                  }} 
+                  className="w-full bg-muted border border-border rounded-lg px-3.5 py-2.5 text-foreground text-[13px] outline-none focus:border-brand-blue transition-colors appearance-none"
+                  style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'14\' height=\'14\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%238b8fa8\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3E%3Cpath d=\'m6 9 6 6 6-6\'/%3E%3C/svg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 12px center' }}
+                >
+                  <option value="">-- Custom Message --</option>
+                  {data.filter((d: any) => d.active).map((t: any) => (
+                    <option key={t.id} value={t.id}>{t.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
                 <label className="block text-[12px] font-medium text-muted-foreground mb-1.5">Notification Title</label>
                 <input required value={bcTitle} onChange={e => setBcTitle(e.target.value)} className="w-full bg-muted border border-border rounded-lg px-3.5 py-2.5 text-foreground text-[13px] outline-none focus:border-brand-blue transition-colors placeholder:text-muted-foreground/50" placeholder="e.g. Flash Sale Alert!" />
               </div>
@@ -192,19 +218,19 @@ export function NotificationsClient({ initialData }: { initialData: any[] }) {
 
           {/* Device Preview (keep as phone-look which is dark) */}
           <div className="flex flex-col items-center justify-center">
-            <div className="w-[300px] h-[600px] bg-black rounded-[40px] border-[8px] border-[#1c1f3a] relative overflow-hidden shadow-2xl flex flex-col justify-center items-center p-4">
-              <div className="absolute top-0 w-[120px] h-6 bg-[#1c1f3a] rounded-b-2xl"></div>
+            <div className="w-[240px] h-[480px] bg-black rounded-[32px] border-[6px] border-[#1c1f3a] relative overflow-hidden shadow-2xl flex flex-col justify-center items-center p-3">
+              <div className="absolute top-0 w-[100px] h-5 bg-[#1c1f3a] rounded-b-xl"></div>
               
-              <div className="w-full bg-[#1a1c29]/90 backdrop-blur-md rounded-2xl p-4 shadow-lg border border-white/10 mt-auto mb-[150px] transform transition-all">
+              <div className="w-full bg-[#1a1c29]/90 backdrop-blur-md rounded-2xl p-3.5 shadow-lg border border-white/10 mt-auto mb-[100px] transform transition-all">
                 <div className="flex items-center gap-2 mb-2">
-                  <div className="w-5 h-5 rounded bg-brand-blue flex items-center justify-center text-[10px] font-bold text-white">ER</div>
-                  <span className="text-[11px] text-white/60 font-medium">ER Coffeelab • now</span>
+                  <div className="w-4 h-4 rounded bg-brand-blue flex items-center justify-center text-[9px] font-bold text-white">ER</div>
+                  <span className="text-[10px] text-white/60 font-medium">ER Coffeelab • now</span>
                 </div>
-                <h4 className="text-white font-bold text-[14px] leading-tight mb-1">{bcTitle || "Notification Title"}</h4>
-                <p className="text-white/80 text-[13px] leading-tight line-clamp-3">{bcBody || "This is how your message body will appear on the customer's lock screen."}</p>
+                <h4 className="text-white font-bold text-[13px] leading-tight mb-1">{bcTitle || "Notification Title"}</h4>
+                <p className="text-white/80 text-[12px] leading-tight line-clamp-3">{bcBody || "This is how your message body will appear on the customer's lock screen."}</p>
               </div>
               
-              <div className="absolute bottom-2 w-[100px] h-1 bg-white/20 rounded-full"></div>
+              <div className="absolute bottom-2 w-[80px] h-1 bg-white/20 rounded-full"></div>
             </div>
             <p className="text-muted-foreground text-[12px] mt-4 font-medium">Lock Screen Preview</p>
           </div>
@@ -256,9 +282,9 @@ export function NotificationsClient({ initialData }: { initialData: any[] }) {
                 <label className="block text-[12px] font-medium text-muted-foreground mb-1.5">Body Template</label>
                 <textarea required rows={3} value={form.body_template} onChange={e => setForm({ ...form, body_template: e.target.value })} className="w-full bg-muted border border-border rounded-lg px-3.5 py-2.5 text-foreground text-[13px] outline-none focus:border-brand-blue resize-none" placeholder="Message content..." />
               </div>
-              <div className="flex items-center gap-2 mt-2">
-                <input type="checkbox" id="activeToggle" checked={form.active} onChange={e => setForm({...form, active: e.target.checked})} className="w-4 h-4 accent-accent" />
-                <label htmlFor="activeToggle" className="text-[13px] text-foreground select-none">Template is Active</label>
+              <div className="flex items-center gap-3 mt-4">
+                <Switch id="activeToggle" checked={form.active} onChange={e => setForm({...form, active: e.target.checked})} />
+                <label htmlFor="activeToggle" className="text-[13px] text-foreground select-none font-medium cursor-pointer">Template is Active</label>
               </div>
               <div className="flex justify-end gap-3 mt-4 pt-4 border-t border-border">
                 <Button type="button" variant="ghost" onClick={() => setIsModalOpen(false)} className="bg-muted text-foreground hover:bg-muted/80 border border-border h-10 px-5 rounded-lg text-[13px] font-semibold">Cancel</Button>

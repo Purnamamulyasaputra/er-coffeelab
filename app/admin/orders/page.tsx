@@ -1,13 +1,10 @@
 import { getOrders } from "@/lib/queries/orders"
-import { OrdersClient } from "./orders-client"
-
-import { cookies } from "next/headers"
+import { OrdersWrapper } from "./orders-wrapper"
+import { requireAdmin } from "@/lib/auth"
 
 export default async function OrdersPage() {
-  const cookieStore = await cookies();
-  const selectedBranchId = cookieStore.get("selectedBranchId")?.value;
-  const branchId = selectedBranchId ? Number(selectedBranchId) : undefined;
-  const orders = await getOrders(branchId)
+  const { resolvedBranchId, role } = await requireAdmin()
+  const orders = await getOrders(resolvedBranchId || undefined)
   
-  return <OrdersClient initialData={orders} />
+  return <OrdersWrapper orders={orders} branchId={resolvedBranchId || undefined} role={role} />
 }

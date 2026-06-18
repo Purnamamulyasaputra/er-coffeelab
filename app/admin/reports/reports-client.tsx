@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/shared/page-header"
 import { DataTable } from "@/components/shared/data-table"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import {
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip as RTooltip, Legend,
@@ -19,7 +20,7 @@ import { useChartTheme } from "@/lib/hooks/use-chart-theme"
 
 const PC = ["#1e3a8a", "#3b82f6", "#22c55e", "#06b6d4", "#f59e0b", "#94a3b8", "#ef4444"]
 
-export function ReportsClient({ initialData }: { initialData: any }) {
+export function ReportsClient({ initialData, branchId }: { initialData: any, branchId?: number }) {
   const [activeTab, setActiveTab] = React.useState("Sales")
   const ct = useChartTheme()
 
@@ -120,10 +121,9 @@ export function ReportsClient({ initialData }: { initialData: any }) {
     {
       header: "Status",
       cell: (item: any) => (
-        <span className={`px-2 py-1 rounded-md text-[11px] font-bold ${item.status === "CLOSED" ? "bg-muted text-muted-foreground" : "bg-success/20 text-success"
-          }`}>
+        <Badge variant={item.status === "CLOSED" ? "default" : "success"}>
           {item.status}
-        </span>
+        </Badge>
       )
     },
     {
@@ -202,7 +202,7 @@ export function ReportsClient({ initialData }: { initialData: any }) {
                 <CartesianGrid strokeDasharray="3 3" stroke={ct.grid} />
                 <XAxis dataKey="m" stroke={ct.text} fontSize={11} tick={{ fill: ct.text }} />
                 <YAxis stroke={ct.text} fontSize={11} tick={{ fill: ct.text }} />
-                <RTooltip contentStyle={tt} />
+                <RTooltip contentStyle={tt} formatter={(value: any) => [`Rp ${value} Juta`, 'Revenue']} />
                 <Bar dataKey="r" fill="#1e3a8a" radius={[4, 4, 0, 0]} barSize={40} />
               </BarChart>
             </ResponsiveContainer>
@@ -214,7 +214,7 @@ export function ReportsClient({ initialData }: { initialData: any }) {
                 <CartesianGrid strokeDasharray="3 3" stroke={ct.grid} />
                 <XAxis dataKey="m" stroke={ct.text} fontSize={11} tick={{ fill: ct.text }} />
                 <YAxis stroke={ct.text} fontSize={11} tick={{ fill: ct.text }} />
-                <RTooltip contentStyle={tt} />
+                <RTooltip contentStyle={tt} formatter={(value: any) => [`${value} Orders`, 'Orders']} />
                 <Line type="monotone" dataKey="o" stroke="#3b82f6" strokeWidth={3} />
               </LineChart>
             </ResponsiveContainer>

@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server"
 import { getDashboardData } from "@/lib/queries/dashboard"
+import { requireAdmin } from "@/lib/auth"
 
 export const dynamic = "force-dynamic"
 
 export async function GET() {
   try {
-    const data = await getDashboardData()
+    const { resolvedBranchId } = await requireAdmin()
+    const data = await getDashboardData(resolvedBranchId || undefined)
     return NextResponse.json({ data })
   } catch (error) {
     console.error("Dashboard API error:", error)

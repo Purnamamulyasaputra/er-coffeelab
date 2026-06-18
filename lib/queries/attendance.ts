@@ -1,6 +1,30 @@
 import { sql } from "@/lib/db"
 
-export async function getAttendance() {
+export async function getAttendance(branchId?: number) {
+  if (branchId) {
+    return await sql`
+      SELECT 
+        a.id, 
+        e.name as emp, 
+        b.name as branch, 
+        to_char(a.clock_in, 'YYYY-MM-DD') as date,
+        to_char(a.clock_in, 'HH24:MI') as in,
+        COALESCE(to_char(a.clock_out, 'HH24:MI'), '-') as out,
+        COALESCE(
+          EXTRACT(HOUR FROM (a.clock_out - a.clock_in))::text || 'h', 
+          '-'
+        ) as hours,
+        COALESCE(
+          (e.hourly_rate * EXTRACT(EPOCH FROM (a.clock_out - a.clock_in))/3600), 
+          null
+        ) as cost
+      FROM employee_attendances a
+      JOIN employees e ON a.employee_id = e.id
+      JOIN branches b ON a.branch_id = b.id
+      WHERE a.branch_id = ${branchId}
+      ORDER BY a.clock_in DESC
+    `
+  }
   return await sql`
     SELECT 
       a.id, 
@@ -36,5 +60,11 @@ export async function createAttendance(data: {
       ${data.employee_id}, ${data.branch_id}, NOW()
     )
     RETURNING id
+  `
+}
+
+export async function deleteAttendance(id: number) {
+  return await sql`
+    DELETE FROM employee_attendances WHERE id = ${id}
   `
 }

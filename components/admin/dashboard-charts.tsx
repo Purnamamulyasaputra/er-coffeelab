@@ -45,8 +45,17 @@ export function PaymentSplitChart({ data }: { data: PaymentData[] }) {
   }
   return (
     <ResponsiveContainer width="100%" height={230} className="[&_:focus]:outline-none">
-      <PieChart>
-        <Pie data={data} cx="50%" cy="50%" innerRadius={45} outerRadius={75} paddingAngle={3} dataKey="value" label={e => `${e.name} ${((e.percent || 0) * 100).toFixed(0)}%`}>
+      <PieChart margin={{ left: 35, right: 35 }}>
+        <Pie
+          data={data}
+          cx="50%" cy="50%"
+          innerRadius={45}
+          outerRadius={65}
+          paddingAngle={3}
+          dataKey="value"
+          style={{ fontSize: '11px', fontWeight: 600 }}
+          label={e => `${e.name} ${((e.percent || 0) * 100).toFixed(0)}%`}
+        >
           {data.map((_item: any, i: number) => <Cell key={i} fill={PC[i % PC.length]} />)}
         </Pie>
         <RTooltip contentStyle={{ backgroundColor: ct.tooltipBg, borderColor: ct.tooltipBorder, borderRadius: 8, color: ct.tooltipText }} />

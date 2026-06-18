@@ -1,6 +1,13 @@
 import { sql } from "@/lib/db"
 
-export async function getBranches() {
+export async function getBranches(branchId?: number) {
+  if (branchId) {
+    return await sql`
+      SELECT * FROM branches
+      WHERE id = ${branchId}
+      ORDER BY sort_order ASC, id ASC
+    `
+  }
   return await sql`
     SELECT * FROM branches
     ORDER BY sort_order ASC, id ASC
@@ -23,18 +30,19 @@ export async function createBranch(data: {
   dinein_enabled: boolean
   tax_rate: number
   service_charge_pct: number
+  pos_key?: string
 }) {
   return await sql`
     INSERT INTO branches (
       name, address, latitude, longitude, phone, image_url, operating_hours, status, delivery_radius_km, sort_order,
-      pickup_enabled, delivery_enabled, dinein_enabled, tax_rate, service_charge_pct
+      pickup_enabled, delivery_enabled, dinein_enabled, tax_rate, service_charge_pct, pos_key
     )
     VALUES (
       ${data.name}, ${data.address}, ${data.latitude}, ${data.longitude}, ${data.phone || null}, 
       ${data.image_url || null}, ${data.operating_hours || null}, ${data.status || 'OPEN'}, 
       ${data.delivery_radius_km ?? 5}, ${data.sort_order ?? 0},
       ${data.pickup_enabled}, ${data.delivery_enabled}, ${data.dinein_enabled}, 
-      ${data.tax_rate}, ${data.service_charge_pct}
+      ${data.tax_rate}, ${data.service_charge_pct}, ${data.pos_key || null}
     )
     RETURNING id
   `
@@ -57,6 +65,7 @@ export async function updateBranch(data: {
   dinein_enabled: boolean
   tax_rate: number
   service_charge_pct: number
+  pos_key?: string
 }) {
   return await sql`
     UPDATE branches SET
@@ -74,7 +83,8 @@ export async function updateBranch(data: {
       delivery_enabled = ${data.delivery_enabled},
       dinein_enabled = ${data.dinein_enabled},
       tax_rate = ${data.tax_rate},
-      service_charge_pct = ${data.service_charge_pct}
+      service_charge_pct = ${data.service_charge_pct},
+      pos_key = COALESCE(${data.pos_key || null}, pos_key)
     WHERE id = ${data.id}
     RETURNING id
   `

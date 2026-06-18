@@ -1,12 +1,15 @@
 import { getActiveKdsOrders } from "@/lib/queries/kds"
-import { KitchenClient } from "@/app/pos/kitchen/kitchen-client"
+import { KitchenClient } from "./kitchen-client"
+import { requireAdmin } from "@/lib/auth"
 
 export default async function AdminKDSPage() {
-  const data = await getActiveKdsOrders(1)
+  const { resolvedBranchId } = await requireAdmin()
+  const branchId = resolvedBranchId || undefined
+  const data = await getActiveKdsOrders(branchId)
   
   return (
-    <div className="h-[calc(100vh-6rem)] overflow-hidden flex flex-col">
-      <KitchenClient initialData={data} />
+    <div className="h-[calc(100vh-4rem)] overflow-hidden flex flex-col -mt-4 sm:-mt-6">
+      <KitchenClient initialData={data} branchId={branchId} />
     </div>
   )
 }

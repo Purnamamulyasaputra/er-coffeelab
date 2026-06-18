@@ -6,10 +6,15 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
-  // @ts-expect-error - typescript is a valid config option
   typescript: {
     ignoreBuildErrors: true,
   },
+  allowedDevOrigins: [
+    '192.168.56.1', 
+    'localhost:3000', 
+    'http://192.168.56.1', 
+    'http://192.168.56.1:3000'
+  ],
 };
 
 export default nextConfig;

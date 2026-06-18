@@ -10,16 +10,17 @@ import { Select } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/components/ui/use-toast"
 import { useRouter } from "next/navigation"
+import { ConfirmationModal } from "@/components/ui/confirmation-modal"
 
-function formatMoney(amount: number | null) {
-  if (amount === null) return "-"
-  return "IDR " + amount.toLocaleString("id-ID").replace(/,/g, '.')
+function formatMoney(amount: number | string | null) {
+  if (amount === null || amount === undefined) return "-"
+  return "Rp " + Number(amount).toLocaleString("id-ID").replace(/,/g, '.')
 }
 
-export function AttendanceClient({ 
-  initialData, employees, branches 
-}: { 
-  initialData: any[], employees: any[], branches: any[] 
+export function AttendanceClient({
+  initialData, employees, branches
+}: {
+  initialData: any[], employees: any[], branches: any[]
 }) {
   const [open, setOpen] = React.useState(false)
   const [loading, setLoading] = React.useState(false)
@@ -28,6 +29,9 @@ export function AttendanceClient({
 
   const [employeeId, setEmployeeId] = React.useState(employees[0]?.id?.toString() || "")
   const [branchId, setBranchId] = React.useState(branches[0]?.id?.toString() || "")
+
+  const [deleteModalOpen, setDeleteModalOpen] = React.useState(false)
+  const [attendanceToDelete, setAttendanceToDelete] = React.useState<any>(null)
 
   const columns = [
     { header: "Employee", accessorKey: "emp" as const },
@@ -39,10 +43,10 @@ export function AttendanceClient({
     { header: "Cost", cell: (item: any) => formatMoney(item.cost) },
     {
       header: "Actions",
-      cell: () => (
+      cell: (item: any) => (
         <div className="flex gap-1">
           <Button size="icon" className="h-[34px] w-[34px] bg-[#2a2d4a] hover:bg-[#2a2d4a]/90 text-white rounded-[10px]"><Pencil size={14} /></Button>
-          <Button size="icon" className="h-[34px] w-[34px] bg-destructive hover:bg-destructive/90 text-white rounded-[10px]" onClick={() => toast("Deleted", "error")}><Trash2 size={14} /></Button>
+          <Button size="icon" className="h-[34px] w-[34px] bg-destructive hover:bg-destructive/90 text-white rounded-[10px]" onClick={() => { setAttendanceToDelete(item); setDeleteModalOpen(true); }}><Trash2 size={14} /></Button>
         </div>
       )
     }
@@ -64,7 +68,7 @@ export function AttendanceClient({
       })
 
       if (!res.ok) throw new Error("Failed to record attendance")
-      
+
       toast("Clock In recorded successfully!", "success")
       setOpen(false)
       router.refresh()
@@ -75,16 +79,35 @@ export function AttendanceClient({
     }
   }
 
+  const confirmDelete = async () => {
+    if (!attendanceToDelete) return
+    setLoading(true)
+    try {
+      const res = await fetch(`/api/attendance/${attendanceToDelete.id}`, { method: "DELETE" })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.error || "Failed to delete attendance record")
+      }
+      toast("Attendance record deleted successfully", "success")
+      setDeleteModalOpen(false)
+      router.refresh()
+    } catch (err: any) {
+      toast(err.message, "error")
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <div>
-      <PageHeader 
-        title="Attendance" 
-        description="Clock records" 
+      <PageHeader
+        title="Attendance"
+        description="Clock records"
         action={
           <Button className="gap-2" onClick={() => setOpen(true)}>
             <Plus size={14} /> Add (Clock In)
           </Button>
-        } 
+        }
       />
       <DataTable data={initialData} columns={columns} keyExtractor={item => item.id.toString()} />
 
@@ -102,13 +125,34 @@ export function AttendanceClient({
             <Select options={branchOptions} value={branchId} onChange={e => setBranchId(e.target.value)} />
           </div>
         </div>
-        <DialogFooter>
-          <Button variant="secondary" onClick={() => setOpen(false)} disabled={loading}>Cancel</Button>
-          <Button variant="default" className="gap-1.5" onClick={handleSave} disabled={loading}>
-            <Check size={14} /> {loading ? "Saving..." : "Clock In"}
+        <DialogFooter className="mt-4">
+          <Button 
+            variant="secondary" 
+            onClick={() => setOpen(false)} 
+            disabled={loading} 
+            className="bg-slate-600 hover:bg-slate-700 text-white border-0 font-medium px-6"
+          >
+            Cancel
+          </Button>
+          <Button 
+            className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-6 disabled:opacity-50 disabled:cursor-not-allowed" 
+            onClick={handleSave} 
+            disabled={loading || !employeeId || (branches.length > 1 && !branchId)}
+          >
+            <Check size={16} /> {loading ? "Saving..." : "Clock In"}
           </Button>
         </DialogFooter>
       </Dialog>
+
+      <ConfirmationModal
+        isOpen={deleteModalOpen}
+        onClose={() => setDeleteModalOpen(false)}
+        onConfirm={confirmDelete}
+        title="Delete Attendance Record"
+        message={<>Are you sure you want to delete the attendance record for <span className="font-bold text-white">{attendanceToDelete?.emp}</span> on <span className="font-bold text-white">{attendanceToDelete?.date}</span>? This action cannot be undone.</>}
+        confirmText={loading ? "Deleting..." : "Delete"}
+        type="danger"
+      />
     </div>
   )
 }

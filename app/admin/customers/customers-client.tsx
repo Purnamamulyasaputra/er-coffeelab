@@ -5,9 +5,18 @@ import { Download, Eye, X, Mail, Phone, MapPin, Calendar, CreditCard, ChevronRig
 import { PageHeader } from "@/components/shared/page-header"
 import { DataTable } from "@/components/shared/data-table"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { formatStatus } from "@/lib/utils"
+
+function getTierVariant(tier: string): any {
+  if (tier === 'Platinum') return 'cool'
+  if (tier === 'Gold') return 'warning'
+  if (tier === 'Silver') return 'default'
+  return 'success'
+}
 
 function formatMoney(amount: number) {
-  return "IDR " + Number(amount || 0).toLocaleString("id-ID")
+  return "Rp " + Number(amount || 0).toLocaleString("id-ID")
 }
 
 export function CustomersClient({ initialData }: { initialData: any[] }) {
@@ -71,14 +80,9 @@ export function CustomersClient({ initialData }: { initialData: any[] }) {
     { 
       header: "Tier", 
       cell: (item: any) => (
-        <span className={`px-2 py-0.5 rounded-md text-[11px] font-bold tracking-wider ${
-          item.tier === 'Platinum' ? 'bg-[#8b5cf6]/20 text-[#8b5cf6]' :
-          item.tier === 'Gold' ? 'bg-[#f59e0b]/20 text-[#f59e0b]' :
-          item.tier === 'Silver' ? 'bg-[#94a3b8]/20 text-[#94a3b8]' :
-          'bg-[#6c72cb]/20 text-[#6c72cb]'
-        }`}>
-          {item.tier.toUpperCase()}
-        </span>
+        <Badge variant={getTierVariant(item.tier)}>
+          {item.tier}
+        </Badge>
       )
     },
     { header: "Points", accessorKey: "pts" as const },
@@ -158,14 +162,9 @@ export function CustomersClient({ initialData }: { initialData: any[] }) {
                       </div>
                       <div>
                         <h3 className="text-foreground font-bold text-[16px]">{customerDetail.profile.name}</h3>
-                        <span className={`px-2 py-0.5 mt-1 rounded-md text-[10px] font-bold tracking-wider inline-block ${
-                          customerDetail.profile.tier_name === 'Platinum' ? 'bg-[#8b5cf6]/20 text-[#8b5cf6]' :
-                          customerDetail.profile.tier_name === 'Gold' ? 'bg-[#f59e0b]/20 text-[#f59e0b]' :
-                          customerDetail.profile.tier_name === 'Silver' ? 'bg-[#94a3b8]/20 text-[#94a3b8]' :
-                          'bg-[#6c72cb]/20 text-[#6c72cb]'
-                        }`}>
-                          {customerDetail.profile.tier_name.toUpperCase()}
-                        </span>
+                        <Badge variant={getTierVariant(customerDetail.profile.tier_name)} className="mt-1">
+                          {customerDetail.profile.tier_name}
+                        </Badge>
                       </div>
                     </div>
                     

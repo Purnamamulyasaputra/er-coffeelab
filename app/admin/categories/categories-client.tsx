@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { useToast } from "@/components/ui/use-toast"
+import { ConfirmationModal } from "@/components/ui/confirmation-modal"
 import { useRouter } from "next/navigation"
 
 export function CategoriesClient({ initialData }: { initialData: any[] }) {
@@ -23,8 +24,28 @@ export function CategoriesClient({ initialData }: { initialData: any[] }) {
   const [sort, setSort] = React.useState("1")
   const [active, setActive] = React.useState(true)
 
+  const [editId, setEditId] = React.useState<number | null>(null)
+  const [deleteModalOpen, setDeleteModalOpen] = React.useState(false)
+  const [deleteId, setDeleteId] = React.useState<number | null>(null)
+
+  const openAddModal = () => {
+    setEditId(null)
+    setName("")
+    setSort((initialData.length + 1).toString())
+    setActive(true)
+    setOpen(true)
+  }
+
+  const openEditModal = (item: any) => {
+    setEditId(item.id)
+    setName(item.name || "")
+    setSort(item.sort?.toString() || "1")
+    setActive(item.status === "ACTIVE")
+    setOpen(true)
+  }
+
   const columns = [
-    { header: "No", accessorKey: "id" as const },
+    { header: "No", cell: (_: any, index: number) => index + 1 },
     { header: "Name", accessorKey: "name" as const },
     { header: "Products", accessorKey: "products" as const },
     { header: "Sort", accessorKey: "sort" as const },
@@ -38,12 +59,15 @@ export function CategoriesClient({ initialData }: { initialData: any[] }) {
     },
     {
       header: "Actions",
-      cell: () => (
+      cell: (item: any) => (
         <div className="flex gap-1">
-          <Button size="icon" className="h-[34px] w-[34px] bg-[#2a2d4a] hover:bg-[#2a2d4a]/90 text-white rounded-[10px]" onClick={() => setOpen(true)}>
+          <Button size="icon" className="h-[34px] w-[34px] bg-[#2a2d4a] hover:bg-[#2a2d4a]/90 text-white rounded-[10px]" onClick={() => openEditModal(item)}>
             <Pencil size={14} />
           </Button>
-          <Button size="icon" className="h-[34px] w-[34px] bg-destructive hover:bg-destructive/90 text-white rounded-[10px]" onClick={() => toast("Deleted", "error")}>
+          <Button size="icon" className="h-[34px] w-[34px] bg-destructive hover:bg-destructive/90 text-white rounded-[10px]" onClick={() => {
+            setDeleteId(item.id)
+            setDeleteModalOpen(true)
+          }}>
             <Trash2 size={14} />
           </Button>
         </div>
@@ -54,8 +78,11 @@ export function CategoriesClient({ initialData }: { initialData: any[] }) {
   const handleSave = async () => {
     setLoading(true)
     try {
-      const res = await fetch("/api/categories", {
-        method: "POST",
+      const url = editId ? `/api/categories/${editId}` : "/api/categories"
+      const method = editId ? "PUT" : "POST"
+
+      const res = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name,
@@ -64,13 +91,37 @@ export function CategoriesClient({ initialData }: { initialData: any[] }) {
         })
       })
 
-      if (!res.ok) throw new Error("Failed to save category")
+      if (!res.ok) {
+        const d = await res.json()
+        throw new Error(d.error || "Failed to save category")
+      }
       
-      toast("Category saved successfully!", "success")
+      toast(editId ? "Category updated successfully!" : "Category added successfully!", "success")
       setOpen(false)
       router.refresh()
       
       setName("")
+    } catch (e: any) {
+      toast(e.message, "error")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!deleteId) return
+    setLoading(true)
+    try {
+      const res = await fetch(`/api/categories/${deleteId}`, {
+        method: "DELETE"
+      })
+      if (!res.ok) {
+        const d = await res.json()
+        throw new Error(d.error || "Failed to delete category")
+      }
+      toast("Category deleted successfully!", "success")
+      setDeleteModalOpen(false)
+      router.refresh()
     } catch (e: any) {
       toast(e.message, "error")
     } finally {
@@ -84,7 +135,7 @@ export function CategoriesClient({ initialData }: { initialData: any[] }) {
         title="Categories" 
         description={`${initialData.length} items`} 
         action={
-          <Button onClick={() => setOpen(true)} className="gap-2">
+          <Button onClick={openAddModal} className="gap-2">
             <Plus size={14} /> Add
           </Button>
         }
@@ -98,7 +149,7 @@ export function CategoriesClient({ initialData }: { initialData: any[] }) {
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogHeader>
-          <DialogTitle>Add Categories</DialogTitle>
+          <DialogTitle>{editId ? "Edit Category" : "Add Category"}</DialogTitle>
         </DialogHeader>
         <div className="flex flex-col gap-3 py-2 overflow-y-auto px-1 max-h-[80vh]">
           <div className="flex flex-col gap-1.5">
@@ -114,13 +165,34 @@ export function CategoriesClient({ initialData }: { initialData: any[] }) {
             <Label htmlFor="active-category" className="text-[13px] font-semibold text-foreground">Active</Label>
           </div>
         </div>
-        <DialogFooter>
-          <Button variant="secondary" onClick={() => setOpen(false)} disabled={loading}>Cancel</Button>
-          <Button variant="default" className="gap-1.5" onClick={handleSave} disabled={loading || !name}>
-            <Check size={14} /> {loading ? "Saving..." : "Save"}
+        <DialogFooter className="mt-4">
+          <Button 
+            variant="secondary" 
+            onClick={() => setOpen(false)} 
+            disabled={loading} 
+            className="bg-slate-600 hover:bg-slate-700 text-white border-0 font-medium px-6"
+          >
+            Cancel
+          </Button>
+          <Button 
+            className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-6 disabled:opacity-50 disabled:cursor-not-allowed" 
+            onClick={handleSave} 
+            disabled={loading || !name}
+          >
+            <Check size={16} /> {loading ? "Saving..." : "Save"}
           </Button>
         </DialogFooter>
       </Dialog>
+
+      <ConfirmationModal
+        isOpen={deleteModalOpen}
+        onClose={() => setDeleteModalOpen(false)}
+        onConfirm={handleDelete}
+        title="Delete Category"
+        message="Are you sure you want to delete this category? Products assigned to this category might need to be reassigned."
+        confirmText={loading ? "Deleting..." : "Yes, Delete"}
+        type="danger"
+      />
     </div>
   )
 }

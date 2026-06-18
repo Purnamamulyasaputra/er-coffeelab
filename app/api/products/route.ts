@@ -15,8 +15,10 @@ export async function POST(request: NextRequest) {
       price: Number(data.price),
       cost: Number(data.cost) || 0,
       sku: data.sku || "",
+      description: data.description || null,
       badge: data.badge || "-",
-      status: data.status || "ACTIVE"
+      status: data.status || "ACTIVE",
+      image_url: data.image_url
     })
 
     return NextResponse.json({ success: true, id: result[0].id }, { status: 201 })

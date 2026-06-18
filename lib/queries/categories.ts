@@ -26,3 +26,24 @@ export async function createCategory(data: {
     RETURNING id
   `
 }
+
+export async function updateCategory(id: number, data: {
+  name: string
+  sort_order: number
+  status: string
+}) {
+  return await sql`
+    UPDATE categories
+    SET 
+      name = ${data.name},
+      sort_order = ${data.sort_order},
+      status = ${data.status}
+    WHERE id = ${id}
+  `
+}
+
+export async function deleteCategory(id: number) {
+  return await sql`
+    DELETE FROM categories WHERE id = ${id}
+  `
+}
