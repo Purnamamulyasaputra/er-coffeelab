@@ -29,12 +29,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     handleResize()
     window.addEventListener("resize", handleResize)
     
-    // Check local storage for theme
-    const savedTheme = localStorage.getItem("theme")
-    if (savedTheme === "dark") {
-      // eslint-disable-next-line
-      setIsDark(true)
-    }
+    // Default to light mode (removed localStorage check as per request)
     // eslint-disable-next-line
     setMounted(true)
     
