@@ -271,8 +271,25 @@ export function ProductsClient({ initialData, categories }: { initialData: any[]
             />
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label>Image</Label>
-            <Input type="file" accept="image/*" onChange={(e) => setImageFile(e.target.files?.[0] || null)} />
+            <Label>Image (Max 2MB)</Label>
+            <Input 
+              type="file" 
+              accept="image/*" 
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  if (file.size > 2 * 1024 * 1024) {
+                    toast("File size exceeds 2MB limit. Please choose a smaller image.", "error");
+                    e.target.value = ""; // Reset input
+                    setImageFile(null);
+                  } else {
+                    setImageFile(file);
+                  }
+                } else {
+                  setImageFile(null);
+                }
+              }} 
+            />
             {(imageUrl || imageFile) && (
               <div className="mt-1 text-xs text-muted-foreground">
                 {imageFile ? `Selected: ${imageFile.name}` : "Image uploaded."}

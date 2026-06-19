@@ -20,18 +20,18 @@ export function OrdersWrapper({
       <div className="flex border-b border-border mb-0 gap-4">
         <button
           onClick={() => setActiveTab("all-orders")}
-          className={`pb-3 text-sm font-semibold border-b-2 transition-all ${activeTab === "all-orders"
-            ? "border-primary text-primary dark:border-sky-400 dark:text-sky-400"
-            : "border-transparent text-slate-500 hover:text-primary dark:text-slate-400 dark:hover:text-white"
+          className={`pb-3 text-[15px] font-bold border-b-2 transition-colors ${activeTab === "all-orders"
+            ? "border-foreground text-foreground"
+            : "border-transparent text-muted-foreground hover:text-foreground hover:border-foreground/30"
             }`}
         >
           All Orders History
         </button>
         <button
           onClick={() => setActiveTab("open-bills")}
-          className={`pb-3 text-sm font-semibold border-b-2 transition-all ${activeTab === "open-bills"
-            ? "border-primary text-primary dark:border-sky-400 dark:text-sky-400"
-            : "border-transparent text-slate-500 hover:text-primary dark:text-slate-400 dark:hover:text-white"
+          className={`pb-3 text-[15px] font-bold border-b-2 transition-colors ${activeTab === "open-bills"
+            ? "border-foreground text-foreground"
+            : "border-transparent text-muted-foreground hover:text-foreground hover:border-foreground/30"
             }`}
         >
           Open Bills (Dine-In)

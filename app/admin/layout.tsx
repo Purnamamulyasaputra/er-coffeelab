@@ -3,13 +3,14 @@
 import * as React from "react"
 import { Sidebar } from "@/components/admin/sidebar"
 import { Header } from "@/components/admin/header"
+import { TabSessionSync } from "@/components/admin/TabSessionSync"
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = React.useState(true)
   const [isMobile, setIsMobile] = React.useState(false)
   const [isDark, setIsDark] = React.useState(false)
   const [mounted, setMounted] = React.useState(false)
-  const [session, setSession] = React.useState<{role: string, name: string, email: string} | null>(null)
+  const [session, setSession] = React.useState<{role: string, name: string, email: string, dineinEnabled?: boolean} | null>(null)
 
   React.useEffect(() => {
     fetch('/api/auth/session')
@@ -49,6 +50,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <div className="flex min-h-screen bg-background text-foreground transition-colors duration-200">
+      <TabSessionSync />
       {isMobile && open && (
         <div 
           className="fixed inset-0 bg-black/50 z-40" 
@@ -63,6 +65,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         role={session?.role}
         userName={session?.name}
         userEmail={session?.email}
+        dineinEnabled={session?.dineinEnabled}
       />
       
       <div className="flex-1 flex flex-col min-w-0">

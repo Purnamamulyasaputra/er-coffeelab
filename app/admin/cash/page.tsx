@@ -16,11 +16,15 @@ export default async function AdminCashPage() {
     getActiveShift(branchId)
   ])
 
+  const showBranchColumn = !branchId;
+
   return (
     <div className="p-0 sm:p-2">
       <CashClient 
         initialData={movements} 
         activeShift={activeShift}
+        isAdmin={isAdmin}
+        showBranchColumn={showBranchColumn}
       />
     </div>
   )

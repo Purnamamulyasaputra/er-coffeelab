@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
     const token = await signToken(payload)
     await setAuthCookie(token, "admin")
 
-    return NextResponse.json({ success: true, redirect: "/admin/dashboard", role: user.role })
+    return NextResponse.json({ success: true, redirect: "/admin/dashboard", role: user.role, token })
   } catch (error: any) {
     console.error("Login error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })

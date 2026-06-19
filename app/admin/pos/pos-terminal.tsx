@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
-import { Coffee, ShoppingCart, X, Circle, CreditCard, Loader2, Wifi, WifiOff, Check, Clock, Users, Monitor, Package, ClipboardList, UserCheck, RotateCcw, FileText, Ticket, Trash2, ChefHat, ShoppingBag, CheckCircle2 } from "lucide-react"
+import { Coffee, ShoppingCart, X, Circle, CreditCard, Loader2, Wifi, WifiOff, Check, Clock, Users, Monitor, Package, ClipboardList, UserCheck, RotateCcw, FileText, Ticket, Trash2, ChefHat, ShoppingBag, CheckCircle2, Lock, User } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { Dialog, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
@@ -31,6 +31,7 @@ export interface POSSession {
   shiftId?: number;
   branchId?: number;
   branchName?: string;
+  role?: string;
 }
 
 export function POSTerminal({
@@ -38,7 +39,8 @@ export function POSTerminal({
   session,
   isEmbedded = false,
   taxes = [],
-  branchSettings
+  branchSettings,
+  branchEmployees
 }: {
   initialProducts: POSProduct[],
   session: POSSession | null,
@@ -47,7 +49,8 @@ export function POSTerminal({
   branchSettings?: {
     dineIn: boolean;
     takeAway: boolean;
-  }
+  },
+  branchEmployees?: any[]
 }) {
   const router = useRouter()
   const { toast } = useToast()
@@ -56,6 +59,11 @@ export function POSTerminal({
   const [loading, setLoading] = React.useState(false)
   const [paymentMethod, setPaymentMethod] = React.useState("CASH")
   const [cashAmount, setCashAmount] = React.useState("")
+  const [isLocked, setIsLocked] = React.useState(session?.role !== 'SUPERADMIN')
+  const [pinInput, setPinInput] = React.useState("")
+  const [pinError, setPinError] = React.useState("")
+  const [cashierName, setCashierName] = React.useState(session?.role === 'SUPERADMIN' ? 'Super Admin' : 'Admin Outlet')
+  const [activeEmployeeId, setActiveEmployeeId] = React.useState<number | null>(null)
   const [isOnline, setIsOnline] = React.useState(true)
   const [queueCount, setQueueCount] = React.useState(0)
   const [activeCategory, setActiveCategory] = React.useState("ALL")
@@ -122,6 +130,13 @@ export function POSTerminal({
         localStorage.removeItem("pendingPosCart")
         if (!sessionId) setOrderType("DINE_IN")
       } catch (e) { }
+    } else if (!sessionId) {
+      // Default order type if not in a session
+      if (branchSettings?.takeAway !== false) {
+        setOrderType("TAKE_AWAY")
+      } else if (branchSettings?.dineIn !== false) {
+        setOrderType("DINE_IN")
+      }
     }
 
     // Fetch active discounts
@@ -129,11 +144,63 @@ export function POSTerminal({
       if (d.data) setDiscounts(d.data)
     }).catch(console.error)
 
+    // Check for saved employee login
+    const savedEmpId = localStorage.getItem("pos_active_employee_id")
+    const savedEmpName = localStorage.getItem("pos_cashier_name")
+    if (savedEmpId && savedEmpName && session?.role !== 'SUPERADMIN') {
+      setActiveEmployeeId(Number(savedEmpId))
+      setCashierName(savedEmpName)
+      setIsLocked(false)
+    }
+
     return () => {
       window.removeEventListener("online", handleOnline)
       window.removeEventListener("offline", handleOffline)
     }
-  }, [])
+  }, [session?.role])
+
+  // Lock screen state
+  const isSuperAdmin = session?.role === "SUPERADMIN"
+
+  const handlePinSubmit = async () => {
+    setLoading(true)
+    try {
+      // Testing Mode Logic: Check against dynamically assigned test PINs (1000, 1001, etc.)
+      // In production, this MUST be an API call to verify bcrypt hashes.
+      if (branchEmployees && branchEmployees.length > 0) {
+        const matchedEmp = branchEmployees.find((emp, index) => {
+          const testPin = String(1001 + index).padStart(4, '0')
+          return testPin === pinInput
+        })
+
+        if (matchedEmp) {
+          setCashierName(matchedEmp.name)
+          setActiveEmployeeId(matchedEmp.id)
+          setIsLocked(false)
+          setPinError("")
+          localStorage.setItem("pos_active_employee_id", matchedEmp.id.toString())
+          localStorage.setItem("pos_cashier_name", matchedEmp.name)
+          toast(`Shift Opened: Welcome ${matchedEmp.name}`, "success")
+          return
+        }
+      } else if (pinInput === "1234") {
+        // Fallback if no employees loaded
+        setCashierName("Admin (Fallback)")
+        setActiveEmployeeId(null)
+        setIsLocked(false)
+        setPinError("")
+        toast("Shift Opened: Welcome Admin", "success")
+        return
+      }
+
+      setPinError("Invalid PIN")
+    } catch (err) {
+      setPinError("Connection error")
+    } finally {
+      setLoading(false)
+      setPinInput("")
+    }
+  }
 
   // Background Sync when online
   React.useEffect(() => {
@@ -292,6 +359,7 @@ export function POSTerminal({
         tableSessionId: activeSessionId ? Number(activeSessionId) : null,
         voucherId: appliedVoucher?.id || null,
         customerId: customerData?.id || null,
+        employeeId: activeEmployeeId,
         items: posCart.map((c: any) => ({
           productId: c.id,
           productName: c.name,
@@ -347,6 +415,126 @@ export function POSTerminal({
     }
   }
 
+  // Handle keyboard input for PIN
+  React.useEffect(() => {
+    if (!isLocked) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (loading) return;
+      
+      if (e.key >= '0' && e.key <= '9') {
+        setPinInput(prev => prev.length < 4 ? prev + e.key : prev);
+      } else if (e.key === 'Backspace') {
+        setPinInput(prev => prev.slice(0, -1));
+      } else if (e.key === 'Enter' && pinInput.length === 4) {
+        // Trigger submit
+        const submitBtn = document.getElementById('pin-submit-btn');
+        if (submitBtn) submitBtn.click();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isLocked, loading, pinInput]);
+
+  if (isLocked) {
+    return (
+      <div className={`flex flex-col items-center justify-center bg-background ${!isEmbedded ? 'min-h-screen' : 'h-[calc(100vh-112px)] w-full'} p-4`}>
+        <div className="flex flex-col md:flex-row gap-6 items-start">
+          {/* PIN Lock Card */}
+          <div className="bg-card text-card-foreground p-5 sm:p-6 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.1)] w-full max-w-[260px] sm:max-w-[280px] text-center border border-border shrink-0">
+            <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-3 text-primary">
+              <UserCheck size={20} />
+            </div>
+            <h2 className="text-lg font-bold mb-1">Open Shift</h2>
+            <p className="text-muted-foreground mb-4 text-[12px]">Enter your PIN to continue</p>
+
+            <div className="flex justify-center gap-2 mb-4">
+              {[0, 1, 2, 3].map((i) => (
+                <div
+                  key={i}
+                  className={`w-3 h-3 rounded-full transition-all duration-300 ${pinInput.length > i
+                      ? 'bg-primary scale-110 shadow-sm'
+                      : 'bg-muted border border-border scale-100'
+                    }`}
+                />
+              ))}
+            </div>
+
+            <div className="h-5 mb-2">
+              {pinError && <p className="text-destructive text-xs font-medium animate-in fade-in slide-in-from-top-1">{pinError}</p>}
+            </div>
+
+            <div className="grid grid-cols-3 gap-2">
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
+                <Button
+                  key={num}
+                  variant="ghost"
+                  className="h-12 w-full rounded-xl text-lg font-semibold bg-transparent hover:bg-muted active:scale-95 transition-all"
+                  onClick={() => setPinInput(prev => prev.length < 4 ? prev + num : prev)}
+                >
+                  {num}
+                </Button>
+              ))}
+              <Button
+                variant="ghost"
+                className="h-12 w-full rounded-xl text-lg font-semibold bg-transparent text-destructive hover:bg-destructive/10 hover:text-destructive active:scale-95 transition-all"
+                onClick={() => setPinInput(prev => prev.slice(0, -1))}
+              >
+                <RotateCcw size={18} />
+              </Button>
+              <Button
+                variant="ghost"
+                className="h-12 w-full rounded-xl text-lg font-semibold bg-transparent hover:bg-muted active:scale-95 transition-all"
+                onClick={() => setPinInput(prev => prev.length < 4 ? prev + "0" : prev)}
+              >
+                0
+              </Button>
+              <Button
+                id="pin-submit-btn"
+                className="h-12 w-full rounded-xl text-lg font-semibold bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm active:scale-95 transition-all"
+                disabled={pinInput.length !== 4 || loading}
+                onClick={handlePinSubmit}
+              >
+                {loading ? <Loader2 className="animate-spin" size={18} /> : <Check size={20} />}
+              </Button>
+            </div>
+          </div>
+
+          {/* Developer Testing Helper Card */}
+          {branchEmployees && branchEmployees.length > 0 && (
+            <div className="bg-card text-card-foreground p-5 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.1)] w-full max-w-[260px] sm:max-w-[280px] border border-border shrink-0">
+              <div className="flex items-center gap-2 mb-4 text-muted-foreground">
+                <Coffee size={16} />
+                <p className="text-[11px] uppercase font-bold">Testing Mode</p>
+              </div>
+              <p className="text-sm font-semibold mb-3">Employee PINs</p>
+              <div className="flex flex-col gap-2 max-h-[260px] overflow-y-auto pr-1 custom-scrollbar">
+                {branchEmployees.map((emp, index) => {
+                  const testPin = String(1001 + index).padStart(4, '0')
+                  return (
+                    <div
+                      key={emp.id}
+                      className="text-left px-3 py-2.5 text-[13px] rounded-xl bg-muted/50 flex justify-between items-center border border-border/50 gap-2"
+                    >
+                      <div className="flex flex-col min-w-0">
+                        <span className="font-semibold text-foreground truncate">{emp.name}</span>
+                        <span className="text-[10px] text-muted-foreground">{emp.role}</span>
+                      </div>
+                      <span className="text-[11px] font-bold text-primary bg-primary/10 px-2 py-1 rounded-md tracking-wider">
+                        {testPin}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className={`flex flex-col font-sans ${!isEmbedded ? 'h-full bg-background text-foreground p-3 md:p-4' : 'h-[calc(100vh-112px)] w-full'}`}>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 gap-3 shrink-0">
@@ -362,18 +550,37 @@ export function POSTerminal({
             )}
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
           {queueCount > 0 && (
             <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-warning/20 text-warning inline-flex items-center gap-1 cursor-pointer" onClick={syncOfflineQueue}>
               {queueCount} QUEUED
             </span>
           )}
-          <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-success/20 text-success inline-flex items-center gap-1">
-            <Circle size={8} className="fill-success" strokeWidth={0} /> OPEN
-          </span>
           <span className={`px-2 py-0.5 rounded-md text-[11px] font-bold inline-flex items-center gap-1 ${isOnline ? 'bg-cyan-500/20 text-cyan-500' : 'bg-destructive/20 text-destructive'}`}>
             {isOnline ? <><Wifi size={10} /> ONLINE</> : <><WifiOff size={10} /> OFFLINE</>}
           </span>
+          {!isSuperAdmin && (
+            <>
+              <div className="h-4 w-px bg-slate-200 dark:bg-slate-700 mx-1"></div>
+              <button
+                onClick={() => {
+                  setIsLocked(true)
+                  localStorage.removeItem("pos_active_employee_id")
+                  localStorage.removeItem("pos_cashier_name")
+                  setActiveEmployeeId(null)
+                  setCashierName("Cashier")
+                }}
+                className="group flex items-center gap-2 pl-1.5 pr-3 py-1.5 rounded-full bg-background border border-border hover:bg-muted hover:border-primary/50 transition-all shadow-sm"
+              >
+                <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0 group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                  <User size={12} />
+                </div>
+                <span className="text-[12px] font-bold text-foreground">{cashierName}</span>
+                <div className="w-px h-3 bg-border mx-0.5"></div>
+                <Lock size={12} className="text-muted-foreground group-hover:text-destructive transition-colors" />
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -472,20 +679,39 @@ export function POSTerminal({
                 <button
                   onClick={() => {
                     if (activeSessionId) return;
+                    setOrderType("DINE_IN");
                     if (posCart.length > 0) {
                       localStorage.setItem("pendingPosCart", JSON.stringify(posCart));
                     }
                     router.push("/admin/tables");
                   }}
-                  className={`px-2 py-0.5 rounded text-[10px] font-bold transition-colors ${orderType === "DINE_IN" ? "bg-card shadow-sm text-foreground border border-border/50" : "text-muted-foreground hover:text-foreground border border-transparent"} ${activeSessionId ? "opacity-50 cursor-not-allowed" : ""}`}
+                  className={`px-2 py-0.5 rounded text-[10px] font-bold transition-colors ${orderType === "DINE_IN" ? "bg-card shadow-sm text-foreground border border-border/50" : "text-muted-foreground hover:text-foreground border border-transparent"}`}
                 >
                   Dine In
                 </button>
               )}
               {branchSettings?.takeAway !== false && (
                 <button
-                  onClick={() => !activeSessionId && setOrderType("TAKE_AWAY")}
-                  className={`px-2 py-0.5 rounded text-[10px] font-bold transition-colors ${orderType === "TAKE_AWAY" ? "bg-card shadow-sm text-foreground border border-border/50" : "text-muted-foreground hover:text-foreground border border-transparent"} ${activeSessionId ? "opacity-50 cursor-not-allowed" : ""}`}
+                  onClick={async () => {
+                    setOrderType("TAKE_AWAY")
+                    if (activeSessionId) {
+                      try {
+                        await fetch("/api/table-sessions", {
+                          method: "PUT",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ sessionId: Number(activeSessionId), action: "close" })
+                        });
+                      } catch (e) {
+                        console.error("Failed to close table session", e);
+                      }
+                      localStorage.removeItem("activeSessionId")
+                      localStorage.removeItem("activeTableNumber")
+                      setActiveSessionId(null)
+                      setActiveTableNumber(null)
+                      toast("Mengubah ke pesanan Take Away.", "success")
+                    }
+                  }}
+                  className={`px-2 py-0.5 rounded text-[10px] font-bold transition-colors ${orderType === "TAKE_AWAY" ? "bg-card shadow-sm text-foreground border border-border/50" : "text-muted-foreground hover:text-foreground border border-transparent"}`}
                 >
                   Take Away
                 </button>
@@ -637,17 +863,15 @@ export function POSTerminal({
                 }
 
                 if (orderType === "DINE_IN" && !activeSessionId) {
-                  localStorage.setItem("pendingPosCart", JSON.stringify(posCart));
-                  toast("Silakan pilih meja terlebih dahulu untuk pesanan Dine In.", "info");
-                  router.push("/admin/tables");
+                  toast("Pesanan Dine In harus dari menu Tables. Silakan hapus pesanan atau ganti ke Take Away.", "error");
                   return;
                 }
 
                 setCheckoutOpen(true)
               }}
               className={`w-full py-2.5 text-white rounded-lg font-bold text-[13px] flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-md ${activeSessionId
-                  ? "bg-slate-800 hover:bg-slate-900 shadow-slate-800/20"
-                  : "bg-primary hover:bg-primary/90 shadow-primary/20"
+                ? "bg-slate-800 hover:bg-slate-900 shadow-slate-800/20"
+                : "bg-primary hover:bg-primary/90 shadow-primary/20"
                 }`}
             >
               {activeSessionId ? <ChefHat size={16} /> : <CreditCard size={16} />}
@@ -762,8 +986,8 @@ export function POSTerminal({
             onClick={handleCheckout}
             disabled={loading || (!activeSessionId && paymentMethod === 'CASH' && Number(cashAmount) < grandTotal)}
             className={`flex-[2] font-bold gap-1.5 text-white shadow-md py-3 text-sm ${activeSessionId
-                ? "bg-slate-800 hover:bg-slate-900 shadow-slate-800/20"
-                : "bg-primary hover:bg-primary/90 shadow-primary/20"
+              ? "bg-slate-800 hover:bg-slate-900 shadow-slate-800/20"
+              : "bg-primary hover:bg-primary/90 shadow-primary/20"
               }`}
           >
             {loading ? <Loader2 size={16} className="animate-spin" /> : activeSessionId ? <ChefHat size={16} /> : <CheckCircle2 size={16} />}

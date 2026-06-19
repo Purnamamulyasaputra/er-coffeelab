@@ -1,0 +1,2 @@
+ALTER TABLE "products" ADD COLUMN "branch_id" bigint;--> statement-breakpoint
+ALTER TABLE "products" ADD CONSTRAINT "products_branch_id_branches_id_fk" FOREIGN KEY ("branch_id") REFERENCES "public"."branches"("id") ON DELETE cascade ON UPDATE no action;

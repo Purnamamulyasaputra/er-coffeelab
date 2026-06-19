@@ -78,14 +78,14 @@ export function ConfirmationModal({
 
       {/* Kontainer Modal */}
       <div 
-        className={`relative w-full max-w-md bg-[#161925] border border-gray-800 rounded-3xl p-6 sm:p-8 flex flex-col items-center text-center transform transition-all animate-in fade-in zoom-in duration-200 ${currentTheme.glow}`}
+        className={`relative w-full max-w-md bg-background border border-border rounded-3xl p-6 sm:p-8 flex flex-col items-center text-center transform transition-all animate-in fade-in zoom-in duration-200 ${currentTheme.glow}`}
         role="dialog"
         aria-modal="true"
       >
         {/* Tombol Tutup (X) di pojok kanan atas */}
         <button 
           onClick={onClose}
-          className="absolute top-4 right-4 p-2 text-gray-500 hover:text-gray-300 hover:bg-gray-800 rounded-full transition-colors cursor-pointer z-10"
+          className="absolute top-4 right-4 p-2 text-muted-foreground hover:text-foreground hover:bg-accent rounded-full transition-colors cursor-pointer z-10"
         >
           <X size={20} />
         </button>
@@ -98,16 +98,18 @@ export function ConfirmationModal({
         </div>
 
         {/* Teks Konten */}
-        <h2 className="text-2xl font-bold text-white mb-3">{title}</h2>
-        <div className="text-gray-400 text-sm leading-relaxed mb-8 px-2 w-full">
-          {message}
-        </div>
+        <h2 className="text-2xl font-bold text-foreground mb-3">{title}</h2>
+        {message && (
+          <div className="text-muted-foreground text-sm leading-relaxed mb-8 px-2 w-full">
+            {message}
+          </div>
+        )}
 
         {/* Grup Tombol Aksi */}
         <div className="flex flex-col-reverse sm:flex-row w-full gap-3 sm:gap-4">
           <button 
             onClick={onClose}
-            className="flex-1 px-6 py-3 rounded-xl text-sm font-semibold text-gray-300 bg-gray-800/50 hover:bg-gray-700/80 border border-gray-700 transition-all duration-200 cursor-pointer"
+            className="flex-1 px-6 py-3 rounded-xl text-sm font-semibold text-secondary-foreground bg-secondary hover:bg-secondary/80 border border-border transition-all duration-200 cursor-pointer"
           >
             {cancelText}
           </button>

@@ -44,6 +44,10 @@ export default function LoginPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Login failed");
 
+      if (data.token) {
+        sessionStorage.setItem("er_auth_token", data.token);
+      }
+
       router.push(data.redirect || "/admin/dashboard");
     } catch (err: unknown) {
       setError((err as Error).message);

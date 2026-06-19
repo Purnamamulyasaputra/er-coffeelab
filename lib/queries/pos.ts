@@ -64,7 +64,7 @@ export async function processPosCheckout(data: {
     VALUES (${orderId}, 'PENDING', 'Order created from POS')
   `
 
-  // 3. Insert Order Items (product_name is NOT NULL in schema)
+  // 3. Insert Order Items and Deduct Inventory
   for (const item of data.items) {
     await sql`
       INSERT INTO order_items (
@@ -76,6 +76,43 @@ export async function processPosCheckout(data: {
         ${item.unitPrice}, ${item.quantity}, ${item.subtotal}, ${item.notes || null}
       )
     `
+
+    // Deduct ingredient stock based on product recipes
+    if (item.productId) {
+      const recipes = await sql`
+        SELECT ingredient_id, quantity_used, unit
+        FROM product_recipes 
+        WHERE product_id = ${item.productId}
+      `
+      
+      for (const recipe of recipes) {
+        const totalDeduction = Number(recipe.quantity_used) * item.quantity;
+        const negDeduction = -totalDeduction;
+        
+        // Upsert to ensure row exists and subtract stock
+        await sql`
+          INSERT INTO ingredient_stock (branch_id, ingredient_id, current_stock, unit)
+          VALUES (${data.branchId}, ${recipe.ingredient_id}, ${negDeduction}, ${recipe.unit})
+          ON CONFLICT (branch_id, ingredient_id)
+          DO UPDATE SET 
+            current_stock = ingredient_stock.current_stock + EXCLUDED.current_stock,
+            updated_at = NOW()
+        `
+        
+        // Log stock movement
+        await sql`
+          INSERT INTO stock_movements (
+            branch_id, ingredient_id, type, quantity, unit, 
+            reference_type, reference_id, notes, employee_id
+          )
+          VALUES (
+            ${data.branchId}, ${recipe.ingredient_id}, 'SALE_DEDUCTION', ${totalDeduction}, 
+            ${recipe.unit}, 'ORDER', ${orderId}, 
+            ${'Auto deduction for order ' + invoiceCode}, ${data.employeeId || null}
+          )
+        `
+      }
+    }
   }
 
   // 4. Log Payment (payment_logs uses invoice_code, not order_id)

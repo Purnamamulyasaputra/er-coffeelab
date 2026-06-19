@@ -18,11 +18,20 @@ export async function POST(request: NextRequest) {
     // Allow branchId override from request body (admin panel branch selector)
     const branchId = data.branchId || session.branchId
 
+    // Validate Dine In eligibility
+    const { sql } = await import("@/lib/db");
+    const branch = await sql`SELECT dinein_enabled FROM branches WHERE id = ${branchId}`;
+    if (branch.length > 0) {
+      if ((data.orderType || 'DINE_IN') === 'DINE_IN' && !branch[0].dinein_enabled) {
+        return NextResponse.json({ error: "Dine-in is not available at this branch" }, { status: 400 })
+      }
+    }
+
     const result = await processPosCheckout({
       branchId: branchId,
       customerId: data.customerId || null,
       shiftId: session.shiftId || 1,
-      employeeId: null, // Admin login does not link to employee table
+      employeeId: data.employeeId || null,
       orderType: data.orderType || 'DINE_IN',
       source: 'POS',
       subtotal: data.subtotal,

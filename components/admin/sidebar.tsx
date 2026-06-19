@@ -67,27 +67,34 @@ interface SidebarProps {
   role?: string;
   userName?: string;
   userEmail?: string;
+  dineinEnabled?: boolean;
 }
 
-export function Sidebar({ open, setOpen, isMobile, role, userName, userEmail }: SidebarProps) {
+export function Sidebar({ open, setOpen, isMobile, role, userName, userEmail, dineinEnabled }: SidebarProps) {
   const pathname = usePathname();
   
-  // Filter menu based on role
+  // Filter menu based on role and branch config
   const filteredGR = React.useMemo(() => {
     return GR.map(group => {
+      let currentItems = group.items;
+
+      // Role-based filtering
       if (role === "STORE_ADMIN") {
         if (group.label === "SYSTEM") return null;
-        
-        const filteredItems = group.items.filter(item => 
+        currentItems = currentItems.filter(item => 
           !["employees", "attendance", "notifications", "taxconfig"].includes(item.id)
         );
-        
-        if (filteredItems.length === 0) return null;
-        return { ...group, items: filteredItems };
       }
-      return group;
+
+      // Branch config filtering
+      if (dineinEnabled === false) {
+        currentItems = currentItems.filter(item => item.id !== "tables");
+      }
+      
+      if (currentItems.length === 0) return null;
+      return { ...group, items: currentItems };
     }).filter(Boolean);
-  }, [role]);
+  }, [role, dineinEnabled]);
 
   return (
     <div 

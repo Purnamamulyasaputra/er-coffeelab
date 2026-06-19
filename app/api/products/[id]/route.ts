@@ -33,11 +33,16 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
 export async function DELETE(request: NextRequest, props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
   try {
+    const { requireAdmin } = await import("@/lib/auth");
+    const session = await requireAdmin();
     const id = Number(params.id)
-    await deleteProduct(id)
+    await deleteProduct(id, session.resolvedBranchId || undefined)
     return NextResponse.json({ success: true })
   } catch (error: any) {
     console.error("Delete product error:", error)
+    if (error.message?.includes('permission')) {
+      return NextResponse.json({ error: error.message }, { status: 403 })
+    }
     // If it fails, it's likely a foreign key constraint violation (e.g. product is used in orders)
     if (error.message?.includes('foreign key constraint')) {
       return NextResponse.json({ error: "Cannot delete product because it has been used in orders." }, { status: 400 })

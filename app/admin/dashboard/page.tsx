@@ -37,7 +37,7 @@ export default function DashboardPage() {
   if (isLoading || !data) {
     return (
       <div>
-        <PageHeader title="Dashboard" description="Real-time analytics across all branches" />
+        <PageHeader title="Dashboard" description="Loading analytics..." />
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           {[1, 2, 3, 4].map(i => (
             <div key={i} className="h-[80px] animate-pulse bg-muted rounded-xl" />
@@ -63,7 +63,7 @@ export default function DashboardPage() {
     <div>
       <PageHeader
         title="Dashboard"
-        description="Real-time analytics across all branches"
+        description={`Real-time analytics for ${data.branchName || "all branches"}`}
       />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">

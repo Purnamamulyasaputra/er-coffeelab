@@ -60,10 +60,21 @@ export function StockClient({
 
   const branchOptions = branches.map(b => ({ label: b.name, value: b.id.toString() }))
 
-  const openEditModal = (item: any) => {
-    setEditId(item.id)
-    setIsAvailable(item.status === "AVAILABLE")
-    setOpen(true)
+  const handleToggleStatus = async (item: any, isAvailable: boolean) => {
+    try {
+      const res = await fetch(`/api/stock/${item.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: isAvailable ? "AVAILABLE" : "OUT_OF_STOCK" })
+      })
+
+      if (!res.ok) throw new Error("Failed to update stock")
+      
+      toast(`Stock updated to ${isAvailable ? "Available" : "Out of Stock"}`, "success")
+      router.refresh()
+    } catch (err: any) {
+      toast(err.message, "error")
+    }
   }
 
   const handleSave = async () => {
@@ -130,32 +141,40 @@ export function StockClient({
     }
   }
 
-  const columns = [
+  const baseColumns = [
     { header: "No", cell: (_: any, index: number) => index + 1 },
     { header: "Product", accessorKey: "product" as const },
     { header: "Branch", accessorKey: "branch" as const },
     { 
       header: "Stock Status", 
       cell: (item: any) => (
-        <Badge variant={item.status === "AVAILABLE" ? "success" : "destructive"}>
-          {item.status === "AVAILABLE" ? "Available" : "Out of Stock"}
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Switch 
+            id={`stock-${item.id}`} 
+            checked={item.status === "AVAILABLE"} 
+            onChange={(e: any) => handleToggleStatus(item, e.target.checked)} 
+          />
+          <Label htmlFor={`stock-${item.id}`} className={`text-[12px] ${item.status === "AVAILABLE" ? "text-success font-bold" : "text-destructive font-bold"}`}>
+            {item.status === "AVAILABLE" ? "Available" : "Out of Stock"}
+          </Label>
+        </div>
       )
     },
     {
       header: "Actions",
       cell: (item: any) => (
         <div className="flex gap-1">
-          <Button size="icon" className="h-[34px] w-[34px] bg-[#2a2d4a] hover:bg-[#2a2d4a]/90 text-white rounded-[10px]" onClick={() => openEditModal(item)}>
-            <Pencil size={14} />
-          </Button>
           <Button size="icon" className="h-[34px] w-[34px] bg-destructive hover:bg-destructive/90 text-white rounded-[10px]" onClick={() => { setDeleteId(item.id); setDeleteModalOpen(true); }}>
             <Trash2 size={14} />
           </Button>
         </div>
       )
     }
-  ]
+  ];
+
+  const columns = currentBranchId 
+    ? baseColumns.filter(col => col.header !== "Branch") 
+    : baseColumns;
 
   return (
     <div>
@@ -171,36 +190,6 @@ export function StockClient({
 
       <DataTable data={initialData} columns={columns} keyExtractor={item => item.id.toString()} />
 
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogHeader>
-          <DialogTitle>Update Stock Status</DialogTitle>
-        </DialogHeader>
-        <div className="flex flex-col gap-3 py-4">
-          <div className="flex items-center gap-3">
-            <Switch id="stock-avail" checked={isAvailable} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setIsAvailable(e.target.checked)} />
-            <Label htmlFor="stock-avail" className="text-[14px] font-semibold text-foreground">
-              {isAvailable ? "Available" : "Out of Stock"}
-            </Label>
-          </div>
-        </div>
-        <DialogFooter className="mt-4">
-          <Button 
-            variant="secondary" 
-            onClick={() => setOpen(false)} 
-            disabled={loading} 
-            className="bg-slate-600 hover:bg-slate-700 text-white border-0 font-medium px-6"
-          >
-            Cancel
-          </Button>
-          <Button 
-            className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-6 disabled:opacity-50 disabled:cursor-not-allowed" 
-            onClick={handleSave} 
-            disabled={loading}
-          >
-            <Check size={16} /> {loading ? "Saving..." : "Save"}
-          </Button>
-        </DialogFooter>
-      </Dialog>
 
       <ConfirmationModal
         isOpen={deleteModalOpen}

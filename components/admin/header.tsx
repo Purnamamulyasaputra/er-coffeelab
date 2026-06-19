@@ -32,6 +32,14 @@ export function Header({ toggleSidebar, isDark, toggleTheme, open, role }: Heade
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
+    // Clear POS login data
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("pos_active_employee_id");
+      localStorage.removeItem("pos_cashier_name");
+      localStorage.removeItem("activeSessionId");
+      localStorage.removeItem("activeTableNumber");
+      localStorage.removeItem("pendingPosCart");
+    }
     await fetch('/api/auth/logout', { method: 'POST' });
     window.location.href = '/login';
   };
@@ -39,6 +47,7 @@ export function Header({ toggleSidebar, isDark, toggleTheme, open, role }: Heade
   const handleBranchChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newBranch = e.target.value;
     setCurrentBranch(newBranch);
+    sessionStorage.setItem("er_selected_branch", newBranch);
     const { setBranchCookie } = await import("@/app/actions/branch");
     await setBranchCookie(newBranch);
     mutate("/api/dashboard");

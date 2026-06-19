@@ -162,6 +162,7 @@ export const categories = pgTable('categories', {
 export const products = pgTable('products', {
   id: bigserial('id', { mode: 'number' }).primaryKey(),
   categoryId: bigint('category_id', { mode: 'number' }).notNull().references(() => categories.id, { onDelete: 'restrict' }),
+  branchId: bigint('branch_id', { mode: 'number' }).references(() => branches.id, { onDelete: 'cascade' }),
   name: varchar('name', { length: 200 }).notNull(),
   description: text('description'),
   imageUrl: varchar('image_url', { length: 500 }),

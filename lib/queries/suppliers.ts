@@ -29,3 +29,24 @@ export async function createSupplier(data: {
     RETURNING id
   `
 }
+
+export async function updateSupplier(id: number, data: {
+  name: string
+  contact: string
+  phone: string
+  email: string
+}) {
+  return await sql`
+    UPDATE suppliers 
+    SET name = ${data.name}, contact_person = ${data.contact}, phone = ${data.phone}, email = ${data.email}
+    WHERE id = ${id}
+    RETURNING id
+  `
+}
+
+export async function deleteSupplier(id: number) {
+  // Rather than deleting, it's safer to soft delete or just delete if no constraints prevent it.
+  return await sql`
+    DELETE FROM suppliers WHERE id = ${id}
+  `
+}

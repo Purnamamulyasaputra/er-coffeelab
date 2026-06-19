@@ -168,6 +168,68 @@ async function seed() {
       isRedirect: dSql`EXCLUDED.is_redirect`,
     }
   });
+  // 10. Dummy Ingredient Stock & Purchase Orders
+  const ingredientsList = await db.select().from(schema.ingredients);
+  for (const branch of [1, 2, 3, 4, 5]) {
+    for (const ingredient of ingredientsList) {
+      const currentStock = Math.floor(Math.random() * 5000) + 1000;
+      await db.insert(schema.ingredientStock).values({
+        branchId: branch,
+        ingredientId: ingredient.id,
+        currentStock: currentStock.toString(),
+        unit: ingredient.unit,
+      }).onConflictDoNothing();
+      
+      await db.insert(schema.stockMovements).values({
+        branchId: branch,
+        ingredientId: ingredient.id,
+        type: 'INITIAL_STOCK',
+        quantity: currentStock.toString(),
+        unit: ingredient.unit,
+        stockBefore: '0',
+        stockAfter: currentStock.toString(),
+        referenceType: 'SYSTEM_SEED',
+        notes: 'Initial seed stock',
+      });
+    }
+
+    for (let i = 0; i < 2; i++) {
+      const poResult = await db.insert(schema.purchaseOrders).values({
+        poNumber: `PO-${Math.floor(Date.now() / 1000)}-${branch}-${i}`,
+        branchId: branch,
+        supplierId: 1, 
+        status: i === 0 ? 'RECEIVED' : 'SUBMITTED',
+        totalAmount: 1000000,
+        notes: 'Monthly supply',
+        approvedBy: 1, 
+        receivedAt: i === 0 ? new Date() : null,
+      }).returning({ id: schema.purchaseOrders.id });
+      
+      if (poResult.length > 0) {
+        const poId = poResult[0].id;
+        await db.insert(schema.purchaseOrderItems).values([
+          {
+            purchaseOrderId: poId,
+            ingredientId: ingredientsList[0].id, 
+            quantityOrdered: '5000',
+            quantityReceived: i === 0 ? '5000' : '0',
+            unit: ingredientsList[0].unit,
+            unitPrice: ingredientsList[0].costPerUnit,
+            subtotal: 5000 * ingredientsList[0].costPerUnit,
+          },
+          {
+            purchaseOrderId: poId,
+            ingredientId: ingredientsList[1].id,
+            quantityOrdered: '5000',
+            quantityReceived: i === 0 ? '5000' : '0',
+            unit: ingredientsList[1].unit,
+            unitPrice: ingredientsList[1].costPerUnit,
+            subtotal: 5000 * ingredientsList[1].costPerUnit,
+          }
+        ]);
+      }
+    }
+  }
 
   console.log('Seeding completed!');
   process.exit(0);

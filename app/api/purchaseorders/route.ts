@@ -30,7 +30,8 @@ export async function POST(request: NextRequest) {
       supplier_id: data.supplier_id,
       branch_id: data.branch_id,
       total_amount: data.total_amount,
-      created_by: adminId
+      created_by: adminId,
+      items: data.items
     })
 
     return NextResponse.json({ success: true, id: result[0].id }, { status: 201 })

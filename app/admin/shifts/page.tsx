@@ -15,11 +15,18 @@ export default async function AdminShiftsPage() {
     getBranches(branchId)
   ])
   
-  const branches = branchId ? allBranches.filter(b => Number(b.id) === branchId) : allBranches;
+  const branches = allBranches;
+  const showBranchColumn = !branchId; // Only show branch column if viewing all branches
   
   return (
     <div className="p-0 sm:p-2">
-      <ShiftsClient initialData={shifts} employees={employees} branches={branches} isAdmin={isAdmin} />
+      <ShiftsClient 
+        initialData={shifts} 
+        employees={employees} 
+        branches={branches} 
+        isAdmin={isAdmin}
+        showBranchColumn={showBranchColumn}
+      />
     </div>
   )
 }

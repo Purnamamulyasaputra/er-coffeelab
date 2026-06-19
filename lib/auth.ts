@@ -27,7 +27,7 @@ export async function setAuthCookie(token: string, type: "admin" | "pos" = "admi
   const cookieName = type === "admin" ? "admin_token" : "pos_token"
   const cookieStore = await cookies()
   cookieStore.set(cookieName, token, {
-    httpOnly: true,
+    httpOnly: false, // Set to false to allow TabSessionSync (multi-tab isolation)
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",

@@ -19,8 +19,8 @@ export default async function AdminPOSPage() {
     const b = branches.find((br: any) => br.id === branchId)
     if (b) {
       branchSettings = {
-        dineIn: b.dine_in,
-        takeAway: b.pickup || b.delivery
+        dineIn: b.dinein_enabled,
+        takeAway: b.pickup_enabled || b.delivery_enabled
       }
     }
   }
@@ -30,6 +30,16 @@ export default async function AdminPOSPage() {
     branchId: branchId,
     shiftId: session?.shiftId || 1
   }
+
+  const { getEmployees } = await import("@/lib/queries/hr")
+  const branchEmployees = await getEmployees(branchId)
   
-  return <POSTerminal initialProducts={products as any} session={posSession} isEmbedded={true} taxes={taxes} branchSettings={branchSettings} />
+  return <POSTerminal 
+    initialProducts={products as any} 
+    session={posSession} 
+    isEmbedded={true} 
+    taxes={taxes} 
+    branchSettings={branchSettings} 
+    branchEmployees={branchEmployees as any}
+  />
 }

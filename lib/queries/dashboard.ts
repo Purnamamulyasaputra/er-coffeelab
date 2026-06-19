@@ -26,12 +26,17 @@ export async function getDashboardData(branchId?: number) {
       AND (${branchId || null}::int IS NULL OR branch_id = ${branchId || null}::int)
   `,
     sql`
-      SELECT COUNT(id)::int AS total FROM customers WHERE status = 'ACTIVE'
+      SELECT COUNT(id)::int AS total 
+      FROM customers c 
+      WHERE status = 'ACTIVE'
+        AND (${branchId || null}::int IS NULL OR EXISTS (SELECT 1 FROM orders o WHERE o.customer_id = c.id AND o.branch_id = ${branchId || null}::int))
     `,
 
     sql`
-      SELECT COUNT(id)::int AS total FROM customers
+      SELECT COUNT(id)::int AS total 
+      FROM customers c
       WHERE status = 'ACTIVE' AND created_at < date_trunc('month', NOW())
+        AND (${branchId || null}::int IS NULL OR EXISTS (SELECT 1 FROM orders o WHERE o.customer_id = c.id AND o.branch_id = ${branchId || null}::int))
     `,
 
   // 2. Revenue + Orders by month (last 6 months)
@@ -220,7 +225,8 @@ export async function getDashboardData(branchId?: number) {
       fulfill: Number(fulfillRate[0]?.pct || 0),
       retain: Number(retainRate[0]?.pct || 0),
       target: 75, // business target placeholder
-    }
+    },
+    branchName: branchId ? (branchPerf[0]?.n || "Outlet") : "All Branches"
   }
 }
 

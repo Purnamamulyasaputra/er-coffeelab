@@ -11,7 +11,8 @@ export async function getEmployees(branchId?: number) {
         e.branch_id,
         e.role, 
         e.hourly_rate as rate, 
-        e.status 
+        e.status,
+        e.pin_hash
       FROM employees e
       LEFT JOIN branches b ON e.branch_id = b.id
       WHERE e.branch_id = ${branchId}
@@ -26,7 +27,8 @@ export async function getEmployees(branchId?: number) {
       e.branch_id,
       e.role, 
       e.hourly_rate as rate, 
-      e.status 
+      e.status,
+      e.pin_hash
     FROM employees e
     LEFT JOIN branches b ON e.branch_id = b.id
     ORDER BY e.created_at DESC
