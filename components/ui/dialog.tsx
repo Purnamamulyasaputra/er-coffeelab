@@ -47,3 +47,11 @@ export function DialogTitle({ children, className }: { children: React.ReactNode
 export function DialogFooter({ children, className }: { children: React.ReactNode, className?: string }) {
   return <div className={cn("flex justify-end gap-2 mt-6", className)}>{children}</div>
 }
+
+export function DialogContent({ children, className }: { children: React.ReactNode, className?: string }) {
+  return <div className={cn("flex flex-col w-full", className)}>{children}</div>
+}
+
+export function DialogDescription({ children, className }: { children: React.ReactNode, className?: string }) {
+  return <p className={cn("text-sm text-muted-foreground", className)}>{children}</p>
+}

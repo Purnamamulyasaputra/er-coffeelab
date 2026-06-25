@@ -1,7 +1,10 @@
 "use client"
 
 import * as React from "react"
-import { RefreshCw, Volume2, Pencil, Trash2, X, Clock, MapPin, Phone, User, CheckCircle2, Monitor, ShoppingBag } from "lucide-react"
+import { RefreshCw, Volume2, Pencil, Trash2, X, Clock, MapPin, Phone, User, CheckCircle2, Monitor, ShoppingBag, CreditCard, Ban, Printer, Users, FileText, Check } from "lucide-react"
+import { jsPDF } from "jspdf"
+import html2canvas from "html2canvas"
+import { ReceiptPrint } from "@/components/pos/receipt-print"
 import { PageHeader } from "@/components/shared/page-header"
 import { DataTable } from "@/components/shared/data-table"
 import { useToast } from "@/components/ui/use-toast"
@@ -10,12 +13,25 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { formatStatus } from "@/lib/utils"
+import { XenditQrisModal } from "@/components/pos/xendit-qris-modal"
+import { XenditEwalletModal } from "@/components/pos/xendit-ewallet-modal"
+import { XenditVaModal } from "@/components/pos/xendit-va-modal"
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 
 function formatMoney(amount: number) {
   return "Rp " + Number(amount).toLocaleString("id-ID")
 }
 
 const STATUS_OPTIONS = ["NEW", "PENDING", "PAID", "PROCESSING", "READY", "COMPLETED", "CANCELLED"]
+
+const CANCEL_REASONS = [
+  "Pelanggan Berubah Pikiran / Batal",
+  "Salah Input Kasir",
+  "Bahan Baku / Produk Habis",
+  "Pembayaran Gagal / Error",
+  "Pesanan Tes / Uji Coba",
+  "Lainnya"
+]
 
 function getStatusVariant(status: string): any {
   if (status === "NEW") return "default"
@@ -38,6 +54,15 @@ function OrderDetailDrawer({ orderId, onClose, onStatusUpdate, role }: { orderId
   const [details, setDetails] = React.useState<any>(null)
   const [loading, setLoading] = React.useState(false)
   const [updating, setUpdating] = React.useState(false)
+  const [paymentModalOpen, setPaymentModalOpen] = React.useState(false)
+  const [paymentData, setPaymentData] = React.useState<any>(null)
+  const [loadingPayment, setLoadingPayment] = React.useState(false)
+  const [cancelModalOpen, setCancelModalOpen] = React.useState(false)
+  const [cancelPresetReason, setCancelPresetReason] = React.useState(CANCEL_REASONS[0])
+  const [cancelReason, setCancelReason] = React.useState("")
+  const [checkoutSuccessModalOpen, setCheckoutSuccessModalOpen] = React.useState(false)
+  const [prePaymentModalOpen, setPrePaymentModalOpen] = React.useState(false)
+  const [lastTransaction, setLastTransaction] = React.useState<any>(null)
   const { toast } = useToast()
 
   React.useEffect(() => {
@@ -75,6 +100,99 @@ function OrderDetailDrawer({ orderId, onClose, onStatusUpdate, role }: { orderId
     }
   }
 
+  const handleCancelOrder = async () => {
+    if (!details) return
+    setUpdating(true)
+
+    const finalReason = cancelPresetReason === "Lainnya" ? cancelReason : cancelPresetReason;
+
+    try {
+      const res = await fetch(`/api/orders/${details.invoice_code}/cancel`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cancelReason: finalReason })
+      })
+      if (!res.ok) throw new Error("Gagal membatalkan")
+      setDetails({ ...details, status: 'CANCELLED' })
+      setCancelModalOpen(false)
+      onStatusUpdate()
+      toast("Pesanan berhasil dibatalkan", "success")
+    } catch (e) {
+      toast("Gagal membatalkan pesanan", "error")
+    } finally {
+      setUpdating(false)
+    }
+  }
+
+  const handleOpenPaymentModal = async () => {
+    if (!details) return
+    setLoadingPayment(true)
+    try {
+      const res = await fetch(`/api/orders/${details.invoice_code}/payment`)
+      const data = await res.json()
+      setPaymentData(data)
+      if (data.type === 'MANUAL') {
+        handlePaymentSuccess(data)
+      } else {
+        setPaymentModalOpen(true)
+      }
+    } catch (e) {
+      toast("Gagal memuat data pembayaran", "error")
+    } finally {
+      setLoadingPayment(false)
+    }
+  }
+
+  const handlePaymentSuccess = (dataOverride?: any) => {
+    handleUpdateStatus('PAID')
+    setPaymentModalOpen(false)
+    
+    const pData = dataOverride || paymentData;
+    
+    setLastTransaction({
+      invoiceId: details.invoice_code,
+      orderType: details.order_mode,
+      tableNumber: details.table_number,
+      items: details.items?.map((i: any) => ({
+        productName: i.product_name,
+        quantity: i.quantity,
+        unitPrice: Number(i.subtotal) / i.quantity,
+        subtotal: Number(i.subtotal)
+      })) || [],
+      subtotal: Number(details.total_amount),
+      taxAmount: 0,
+      discountAmount: 0,
+      totalAmount: Number(details.total_amount),
+      cashAmount: Number(details.total_amount),
+      paymentMethod: pData?.type || 'ONLINE',
+    })
+    
+    setCheckoutSuccessModalOpen(true)
+    setPaymentData(null)
+  }
+
+  const handleDownloadPDF = async () => {
+    const el = document.getElementById("receipt-print-area")
+    if (!el) return
+    try {
+      const canvas = await html2canvas(el, { scale: 2 })
+      const imgData = canvas.toDataURL("image/png")
+
+      const pdfWidth = 80;
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: [pdfWidth, Math.max(100, pdfHeight)]
+      })
+
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight)
+      pdf.save(`Receipt-${lastTransaction?.invoiceId || 'POS'}.pdf`)
+    } catch (e) {
+      toast("Failed to generate PDF", "error")
+    }
+  }
+
   return (
     <>
       {/* Backdrop */}
@@ -83,7 +201,7 @@ function OrderDetailDrawer({ orderId, onClose, onStatusUpdate, role }: { orderId
         onClick={onClose}
       />
       {/* Drawer */}
-      <div className={`fixed right-0 top-0 h-full w-[400px] bg-card shadow-2xl z-50 transform transition-transform duration-300 flex flex-col ${orderId ? 'translate-x-0' : 'translate-x-full'}`}>
+      <div className={`fixed right-0 top-0 h-full w-[425px] bg-card shadow-2xl z-50 transform transition-transform duration-300 flex flex-col ${orderId ? 'translate-x-0' : 'translate-x-full'}`}>
         {orderId && (
           <>
             <div className="flex items-center justify-between p-4 bg-sidebar-hover-bg/30 border-b border-border">
@@ -122,33 +240,83 @@ function OrderDetailDrawer({ orderId, onClose, onStatusUpdate, role }: { orderId
               ) : (
                 <div className="space-y-3">
                   {/* Status Control */}
-                  <div className="bg-sidebar-hover-bg/50 p-2 px-3 rounded-md border border-border flex items-center justify-between">
-                    <div className="flex gap-6">
-                      <div>
-                        <div className="text-[10px] font-bold text-foreground/70">ORDER STATUS</div>
-                        <Badge variant={getStatusVariant(details.status)} className="text-[11px] px-2.5 py-0.5 h-5 mt-1">
-                          {details.status}
+                  <div className="bg-sidebar-hover-bg/50 p-4 rounded-lg border border-border">
+                    <div className="grid grid-cols-[1fr_1fr_auto] gap-4">
+                      {/* Column 1: Order Status */}
+                      <div className="space-y-2">
+                        <div className="text-[10px] font-bold text-foreground/70 uppercase tracking-wider">Order Status</div>
+                        <div className="flex flex-col gap-2 items-start">
+                          <Badge variant={getStatusVariant(details.status)} className="text-[11px] px-2.5 py-0.5 h-6">
+                            {details.status}
+                          </Badge>
+                          {role !== "STORE_ADMIN" && (
+                            <select
+                              className="bg-card border border-input rounded-md px-2 py-1.5 text-xs font-medium outline-none cursor-pointer disabled:opacity-50 w-full mt-1"
+                              value={details.status}
+                              disabled={updating}
+                              onChange={(e) => handleUpdateStatus(e.target.value)}
+                            >
+                              {STATUS_OPTIONS.map(s => (
+                                <option key={s} value={s}>{formatStatus(s)}</option>
+                              ))}
+                            </select>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Column 2: Payment */}
+                      <div className="space-y-2">
+                        <div className="text-[10px] font-bold text-foreground/70 uppercase tracking-wider">Payment</div>
+                        <Badge
+                          variant={details.status === 'CANCELLED' ? 'default' : details.paid_at ? 'success' : 'warning'}
+                          className={`text-[11px] px-2.5 py-0.5 h-6 uppercase ${details.status === 'CANCELLED' ? 'bg-muted text-muted-foreground hover:bg-muted' : ''}`}
+                        >
+                          {details.status === 'CANCELLED' ? 'Canceled' : details.paid_at ? 'Paid' : 'Pending'}
                         </Badge>
                       </div>
-                      <div>
-                        <div className="text-[10px] font-bold text-foreground/70">PAYMENT</div>
-                        <Badge variant={details.paid_at || details.payment_method_code ? 'success' : 'warning'} className="text-[11px] px-2.5 py-0.5 h-5 mt-1 uppercase">
-                          {details.paid_at || details.payment_method_code ? 'PAID' : 'PENDING'}
-                        </Badge>
+
+                      {/* Column 3: Actions */}
+                      <div className="space-y-2">
+                        <div className="text-[10px] font-bold text-foreground/70 uppercase tracking-wider text-center">Actions</div>
+                        <div className="flex gap-2 justify-end">
+                          {!details.paid_at && details.status !== 'CANCELLED' && (
+                            <Button
+                              variant="default"
+                              size="sm"
+                              className="text-[10px] h-7 px-2.5 gap-1.5 bg-blue-950 hover:bg-blue-900 text-white"
+                              onClick={handleOpenPaymentModal}
+                              disabled={loadingPayment}
+                            >
+                              {loadingPayment ? (
+                                <RefreshCw className="w-3 h-3 animate-spin" />
+                              ) : (
+                                <CreditCard className="w-3 h-3" />
+                              )}
+                              <span>Bayar</span>
+                            </Button>
+                          )}
+                          {['PENDING', 'PROCESSING', 'NEW'].includes(details.status) && !details.paid_at && (
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              className="text-[10px] h-7 px-2.5 gap-1.5"
+                              onClick={() => {
+                                setCancelPresetReason(CANCEL_REASONS[0]);
+                                setCancelReason("");
+                                setCancelModalOpen(true);
+                              }}
+                            >
+                              <Ban className="w-3 h-3" />
+                              <span>Batal</span>
+                            </Button>
+                          )}
+                          {/* Fallback if no actions available */}
+                          {(details.paid_at || details.status === 'CANCELLED' || !['PENDING', 'PROCESSING', 'NEW'].includes(details.status)) && (
+                            <span className="text-xs text-muted-foreground italic mt-1 block text-center">Tidak ada aksi tersedia</span>
+                          )}
+                        </div>
                       </div>
                     </div>
-                    {role !== "STORE_ADMIN" && (
-                      <select
-                        className="bg-card border border-input rounded-md flex items-center px-2 py-1 text-xs font-medium outline-none cursor-pointer disabled:opacity-50"
-                        value={details.status}
-                        disabled={updating}
-                        onChange={(e) => handleUpdateStatus(e.target.value)}
-                      >
-                        {STATUS_OPTIONS.map(s => (
-                          <option key={s} value={s}>{formatStatus(s)}</option>
-                        ))}
-                      </select>
-                    )}
                   </div>
 
                   {/* Customer Info */}
@@ -178,7 +346,7 @@ function OrderDetailDrawer({ orderId, onClose, onStatusUpdate, role }: { orderId
                     </div>
                     <div className="pt-1.5 mt-1.5 border-t border-border flex justify-between font-bold text-xs text-foreground">
                       <span>Total</span>
-                      <span>{formatMoney(Number(details.total_amount))}</span>
+                      <span className="mr-1.5">{formatMoney(Number(details.total_amount))}</span>
                     </div>
                   </div>
 
@@ -197,7 +365,7 @@ function OrderDetailDrawer({ orderId, onClose, onStatusUpdate, role }: { orderId
                             <div className="text-[11px] text-foreground/80 flex items-center gap-1 mt-0.5">
                               <Clock size={10} />
                               {new Date(log.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                              {' • '}{log.actor_type}
+                              {' • '}{log.actor_name ? `${log.actor_name} (${log.actor_role || log.actor_type})` : log.actor_type}
                             </div>
                             {log.notes && <div className="text-[10px] text-foreground/70 mt-0.5 italic leading-tight">{log.notes}</div>}
                           </div>
@@ -213,6 +381,139 @@ function OrderDetailDrawer({ orderId, onClose, onStatusUpdate, role }: { orderId
             </div>
           </>
         )}
+      </div>
+
+      {paymentData && (
+        <>
+          {paymentData.type === 'QRIS' ? (
+            <XenditQrisModal
+              open={paymentModalOpen}
+              onOpenChange={(o) => { setPaymentModalOpen(o); if (!o) setPaymentData(null) }}
+              paymentRequestId={paymentData.paymentRequestId || null}
+              qrString={paymentData.qrString || paymentData.paymentRequestId || null}
+              amount={paymentData.amount || 0}
+              logoUrl={paymentData.logoUrl || undefined}
+              onSuccess={handlePaymentSuccess}
+              onCancel={() => { setPaymentModalOpen(false); setPaymentData(null) }}
+            />
+          ) : paymentData.type === 'VA' ? (
+            <XenditVaModal
+              open={paymentModalOpen}
+              onOpenChange={(o) => { setPaymentModalOpen(o); if (!o) setPaymentData(null) }}
+              paymentRequestId={paymentData.paymentRequestId || null}
+              accountNumber={paymentData.vaNumber || null}
+              amount={paymentData.amount || 0}
+              methodName={paymentData.methodName || paymentData.methodCode || 'VA'}
+              instructions={[]}
+              logoUrl={paymentData.logoUrl || undefined}
+              onSuccess={handlePaymentSuccess}
+              onCancel={() => { setPaymentModalOpen(false); setPaymentData(null) }}
+            />
+          ) : (
+            <XenditEwalletModal
+              open={paymentModalOpen}
+              onOpenChange={(o) => { setPaymentModalOpen(o); if (!o) setPaymentData(null) }}
+              paymentRequestId={paymentData.paymentRequestId || null}
+              actions={paymentData.redirectUrl ? [{ url_type: 'WEB', url: paymentData.redirectUrl }] : []}
+              amount={paymentData.amount || 0}
+              methodName={paymentData.methodName || paymentData.methodCode || 'E-Wallet'}
+              channelCode={paymentData.channelCode || paymentData.methodCode || ''}
+              logoUrl={paymentData.logoUrl || undefined}
+              onSuccess={handlePaymentSuccess}
+              onCancel={() => { setPaymentModalOpen(false); setPaymentData(null) }}
+            />
+          )}
+        </>
+      )}
+
+      {/* Cancel Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={cancelModalOpen}
+        onClose={() => setCancelModalOpen(false)}
+        onConfirm={handleCancelOrder}
+        type="danger"
+        title="Batalkan Pesanan?"
+        confirmText={updating ? "Membatalkan..." : "Konfirmasi Batalkan"}
+        cancelText="Tutup"
+        message={
+          <div className="text-left mt-2">
+            <p className="text-sm text-muted-foreground mb-4">
+              Pilih alasan pembatalan pesanan ini:
+            </p>
+            <select
+              className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring mb-3"
+              value={cancelPresetReason}
+              onChange={(e) => setCancelPresetReason(e.target.value)}
+              disabled={updating}
+            >
+              {CANCEL_REASONS.map(r => (
+                <option key={r} value={r}>{r}</option>
+              ))}
+            </select>
+            {cancelPresetReason === "Lainnya" && (
+              <textarea
+                className="w-full min-h-[100px] rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                placeholder="Tulis alasan pembatalan..."
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                disabled={updating}
+                autoFocus
+              />
+            )}
+          </div>
+        }
+      />
+
+
+      {/* Checkout Success Modal */}
+      <Dialog open={checkoutSuccessModalOpen} onOpenChange={(open) => {
+        if (!open) {
+          setCheckoutSuccessModalOpen(false);
+          setLastTransaction(null);
+        }
+      }}>
+        <DialogContent className="sm:max-w-md bg-card border-border">
+          <DialogTitle className="text-center text-xl text-primary flex flex-col items-center gap-2 mt-4">
+            <CheckCircle2 size={48} className="text-primary" />
+            Pembayaran Berhasil!
+          </DialogTitle>
+
+          <div className="flex flex-col sm:flex-row gap-2 mt-4">
+            <Button
+              variant="outline"
+              className="w-full gap-2 font-bold"
+              onClick={handleDownloadPDF}
+            >
+              <FileText size={16} /> Download PDF
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full gap-2 font-bold"
+              onClick={() => window.print()}
+            >
+              <Printer size={16} /> Print Receipt
+            </Button>
+            <Button
+              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground gap-2 font-bold shadow-md"
+              onClick={() => {
+                setCheckoutSuccessModalOpen(false)
+                setLastTransaction(null)
+              }}
+            >
+              <Check size={16} /> Selesai
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Hidden Receipt Component for Printing/PDF */}
+      <div className="hidden">
+        <ReceiptPrint
+          transaction={lastTransaction}
+          branchName="ER Coffeelab"
+          cashierName={role || "Admin"}
+          receiptId="receipt-print-area"
+        />
       </div>
     </>
   )
@@ -365,8 +666,8 @@ export function OrdersClient({ initialData, role }: { initialData: any[], role?:
             key={status}
             onClick={() => setStatusFilter(status)}
             className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition-colors cursor-pointer border ${statusFilter === status
-                ? 'bg-brand-blue text-white border-brand-blue'
-                : 'bg-card text-muted-foreground border-border hover:text-foreground hover:bg-muted'
+              ? 'bg-brand-blue text-white border-brand-blue'
+              : 'bg-card text-muted-foreground border-border hover:text-foreground hover:bg-muted'
               }`}
           >
             {formatStatus(status)}
@@ -384,12 +685,12 @@ export function OrdersClient({ initialData, role }: { initialData: any[], role?:
         dense={true}
       />
 
-        <OrderDetailDrawer
-          orderId={selectedOrderId}
-          onClose={() => setSelectedOrderId(null)}
-          onStatusUpdate={() => router.refresh()}
-          role={role}
-        />
+      <OrderDetailDrawer
+        orderId={selectedOrderId}
+        onClose={() => setSelectedOrderId(null)}
+        onStatusUpdate={() => router.refresh()}
+        role={role}
+      />
 
       <ConfirmationModal
         isOpen={deleteConfirmOpen}
@@ -409,7 +710,7 @@ export function OrdersClient({ initialData, role }: { initialData: any[], role?:
         }}
         type="danger"
         title="Delete Order"
-        message={<>Are you sure you want to delete order <span className="font-bold text-white">#{orderToDelete?.id}</span>?</>}
+        message={<>Are you sure you want to delete order <span className="font-bold">#{orderToDelete?.id}</span>?</>}
         confirmText="Delete Order"
       />
     </div>

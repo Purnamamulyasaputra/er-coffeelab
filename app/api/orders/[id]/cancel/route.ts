@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { updateOrderStatus } from '@/lib/queries/orders';
+import { cancelOrder } from '@/lib/queries/orders';
 import { getSession } from '@/lib/auth';
 
-export async function PUT(
+export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -11,21 +11,21 @@ export async function PUT(
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
     const { id } = await params;
-    const body = await request.json();
-    const { status, cancelReason } = body;
-    
-    if (!status) {
-      return NextResponse.json({ error: "Status is required" }, { status: 400 });
-    }
+    const body = await request.json().catch(() => ({}));
+    const { cancelReason } = body;
 
     const actorId = session.sub ? Number(session.sub) : undefined;
-    const success = await updateOrderStatus(id, status, actorId, cancelReason);
-    if (!success) {
-      return NextResponse.json({ error: "Order not found" }, { status: 404 });
+    const result = await cancelOrder(id, actorId, cancelReason);
+
+    if (!result.success) {
+      return NextResponse.json({ error: result.error }, { status: 400 });
     }
+
     return NextResponse.json({ success: true });
   } catch (error: any) {
+    console.error("Cancel order error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

@@ -20,7 +20,7 @@ export async function getActiveKdsOrders(branchId?: number) {
         LEFT JOIN customers c ON c.id = o.customer_id
         LEFT JOIN branches b ON b.id = o.branch_id
         WHERE o.branch_id = ${branchId}
-          AND o.status IN ('PENDING', 'PROCESSING', 'READY')
+          AND o.status IN ('PENDING', 'PAID', 'PROCESSING', 'READY')
         ORDER BY o.created_at ASC
       `
     : await sql`
@@ -38,7 +38,7 @@ export async function getActiveKdsOrders(branchId?: number) {
         LEFT JOIN store_tables t ON t.id = o.table_id
         LEFT JOIN customers c ON c.id = o.customer_id
         LEFT JOIN branches b ON b.id = o.branch_id
-        WHERE o.status IN ('PENDING', 'PROCESSING', 'READY')
+        WHERE o.status IN ('PENDING', 'PAID', 'PROCESSING', 'READY')
         ORDER BY o.created_at ASC
       `
 
@@ -76,8 +76,7 @@ export async function updateOrderStatus(orderId: number, status: string, actorTy
   const orderInfo = await sql`SELECT paid_at FROM orders WHERE id = ${orderId}`
   const isPaid = orderInfo[0]?.paid_at != null
 
-  // If bumping to READY but it's already paid, skip READY and go straight to COMPLETED
-  const finalStatus = (status === 'READY' && isPaid) ? 'COMPLETED' : status
+  const finalStatus = status;
 
   if (finalStatus === 'COMPLETED') {
     await sql`

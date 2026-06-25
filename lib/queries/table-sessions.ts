@@ -153,24 +153,24 @@ export async function paySessionOrders(sessionId: number, employeeId: number | n
   const unpaidOrders = await sql`
     SELECT id, invoice_code, total_amount
     FROM orders
-    WHERE table_session_id = ${sessionId} AND status = 'PENDING'
+    WHERE table_session_id = ${sessionId} AND paid_at IS NULL AND status != 'CANCELLED'
   `
 
   if (unpaidOrders.length > 0) {
     for (const order of unpaidOrders) {
-      // Update order to COMPLETED
+      // Update order to PAID
       await sql`
         UPDATE orders
-        SET status = 'COMPLETED', payment_method_code = ${paymentMethod}
+        SET status = 'PAID', payment_method_code = ${paymentMethod}, paid_at = NOW()
         WHERE id = ${order.id}
       `
 
       // Log payment
       await sql`
-        INSERT INTO payment_logs (invoice_code, type, request_payload, http_status)
+        INSERT INTO payment_logs (invoice_code, type, response_payload, http_status)
         VALUES (
           ${order.invoice_code}, 'POS_CHECKOUT',
-          ${JSON.stringify({ method: paymentMethod, amount: order.total_amount, cashAmount })},
+          ${JSON.stringify({ status: 'SUCCEEDED', method: paymentMethod, amount: order.total_amount, cashAmount })},
           200
         )
       `

@@ -57,7 +57,7 @@ export function Header({ toggleSidebar, isDark, toggleTheme, open, role }: Heade
 
   return (
     <>
-      <div className="h-12 bg-card border-b border-border flex items-center px-4 gap-2.5 sticky top-0 z-40">
+      <div className="print:hidden h-12 bg-card border-b border-border flex items-center px-4 gap-2.5 sticky top-0 z-40">
         {!open && (
           <button
             onClick={toggleSidebar}

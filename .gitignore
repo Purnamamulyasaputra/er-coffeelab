@@ -58,3 +58,15 @@ next-env.d.ts
 # editor configs
 .vscode/
 .idea/
+
+# One-off scripts
+scratch*.ts
+update_logos.ts
+test.ts
+check_db.js
+fix_db.js
+db_step1.js
+drop_payment_status.js
+add_payment_status.js
+add-branch-id.ts
+query.ts

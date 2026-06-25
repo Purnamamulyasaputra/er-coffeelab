@@ -54,7 +54,8 @@ export function KitchenClient({ initialData, branchId }: { initialData: any[], b
       })
       if (!res.ok) {
         // Revert on error
-        const updated = await fetch("/api/kds?branchId=1").then(r => r.json())
+        const url = branchId ? `/api/kds?branchId=${branchId}` : `/api/kds`;
+        const updated = await fetch(url).then(r => r.json())
         setOrders(updated.data)
       }
     } catch (e) {
@@ -70,12 +71,12 @@ export function KitchenClient({ initialData, branchId }: { initialData: any[], b
     return res
   }, [orders, filter])
 
-  const newOrders = filteredOrders.filter(o => o.order_status === "PENDING")
+  const newOrders = filteredOrders.filter(o => o.order_status === "PENDING" || o.order_status === "PAID")
   const inProgressOrders = filteredOrders.filter(o => o.order_status === "PROCESSING")
   const readyOrders = filteredOrders.filter(o => o.order_status === "READY")
 
   const TicketCard = ({ order }: { order: any }) => {
-    const borderColor = order.order_status === "PENDING" ? "border-l-[#ef4444]" :
+    const borderColor = (order.order_status === "PENDING" || order.order_status === "PAID") ? "border-l-[#ef4444]" :
                        order.order_status === "PROCESSING" ? "border-l-[#f59e0b]" : "border-l-[#22c55e]";
 
     return (

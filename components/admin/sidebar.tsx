@@ -86,10 +86,7 @@ export function Sidebar({ open, setOpen, isMobile, role, userName, userEmail, di
         );
       }
 
-      // Branch config filtering
-      if (dineinEnabled === false) {
-        currentItems = currentItems.filter(item => item.id !== "tables");
-      }
+      // Branch config filtering removed so Tables is always visible
       
       if (currentItems.length === 0) return null;
       return { ...group, items: currentItems };
@@ -99,7 +96,7 @@ export function Sidebar({ open, setOpen, isMobile, role, userName, userEmail, di
   return (
     <div 
       className={cn(
-        "fixed md:sticky top-0 left-0 z-50 h-screen flex flex-col transition-all duration-200 overflow-hidden",
+        "print:hidden fixed md:sticky top-0 left-0 z-50 h-screen flex flex-col transition-all duration-200 overflow-hidden",
         "bg-sidebar text-sidebar-foreground border-r border-sidebar-border shadow-sm",
         isMobile ? (open ? "w-[260px]" : "w-0 -translate-x-full") : (open ? "w-[240px]" : "w-[58px]")
       )}

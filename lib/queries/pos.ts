@@ -34,10 +34,11 @@ export async function processPosCheckout(data: {
   const dateStr = `${d.getFullYear()}${(d.getMonth()+1).toString().padStart(2,'0')}${d.getDate().toString().padStart(2,'0')}`
   const receiptNumber = `RCP-${dateStr}-${randomStr}`
 
-  // Determine if this is a paid order immediately (direct checkout) or unpaid (open bill)
-  const isPaid = !!data.paymentMethod;
+  // Determine if this is a paid order immediately (CASH/DEBIT) or unpaid (open bill / online payment)
+  const isPaid = data.paymentMethod === 'CASH' || data.paymentMethod === 'DEBIT_CARD';
 
-  // 1. Insert Order (status = PENDING so it appears in KDS)
+  // 1. Insert Order (status = PAID if cash/debit, PENDING if open bill/online, so it appears in KDS)
+  const orderStatus = isPaid ? 'PAID' : 'PENDING'
   const orderResult = await sql`
     INSERT INTO orders (
       branch_id, customer_id, shift_id, invoice_code,
@@ -48,7 +49,7 @@ export async function processPosCheckout(data: {
     )
     VALUES (
       ${data.branchId}, ${data.customerId || null}, ${data.shiftId}, ${invoiceCode},
-      ${data.orderType}, ${data.source}, 'PENDING',
+      ${data.orderType}, ${data.source}, ${orderStatus},
       ${data.subtotal}, ${data.taxAmount}, ${data.discountAmount}, ${data.totalAmount},
       ${data.paymentMethod || null}, true, ${data.tableSessionId || null},
       ${data.employeeId || null}, ${receiptNumber}, ${data.voucherId || null}, ${isPaid ? sql`NOW()` : null}
@@ -118,10 +119,10 @@ export async function processPosCheckout(data: {
   // 4. Log Payment (payment_logs uses invoice_code, not order_id)
   if (isPaid) {
     await sql`
-      INSERT INTO payment_logs (invoice_code, type, request_payload, http_status)
+      INSERT INTO payment_logs (invoice_code, type, response_payload, http_status)
       VALUES (
         ${invoiceCode}, 'POS_CASH',
-        ${JSON.stringify({ method: data.paymentMethod, amount: data.totalAmount, cashAmount: data.cashAmount || 0 })},
+        ${JSON.stringify({ status: 'SUCCEEDED', method: data.paymentMethod, amount: data.totalAmount, cashAmount: data.cashAmount || 0 })},
         200
       )
     `

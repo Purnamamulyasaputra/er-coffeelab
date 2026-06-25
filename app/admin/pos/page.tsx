@@ -13,11 +13,13 @@ export default async function AdminPOSPage() {
   
   let taxes: any[] = []
   let branchSettings = { dineIn: true, takeAway: true }
+  let branchNameStr = "Cabang Utama";
   if (branchId) {
     taxes = await getBranchTaxes(branchId)
     const branches = await getBranches()
     const b = branches.find((br: any) => br.id === branchId)
     if (b) {
+      branchNameStr = b.name;
       branchSettings = {
         dineIn: b.dinein_enabled,
         takeAway: b.pickup_enabled || b.delivery_enabled
@@ -28,12 +30,20 @@ export default async function AdminPOSPage() {
   const posSession = {
     ...session,
     branchId: branchId,
+    branchName: branchNameStr,
     shiftId: session?.shiftId || 1
   }
 
   const { getEmployees } = await import("@/lib/queries/hr")
   const branchEmployees = await getEmployees(branchId)
   
+  const { getShifts } = await import("@/lib/queries/shifts")
+  const shifts = await getShifts(branchId)
+  const activeShifts = shifts.filter((s: any) => s.status === 'OPEN')
+  
+  const { sql } = await import("@/lib/db")
+  const paymentMethods = await sql`SELECT * FROM payment_methods WHERE is_active = true ORDER BY sort_order ASC`
+
   return <POSTerminal 
     initialProducts={products as any} 
     session={posSession} 
@@ -41,5 +51,7 @@ export default async function AdminPOSPage() {
     taxes={taxes} 
     branchSettings={branchSettings} 
     branchEmployees={branchEmployees as any}
+    activeShifts={activeShifts as any}
+    paymentMethods={paymentMethods as any}
   />
 }

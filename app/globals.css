@@ -123,3 +123,14 @@ body {
 button {
   cursor: pointer;
 }
+
+@media print {
+  @page {
+    margin: 0;
+  }
+  body {
+    background-color: transparent !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

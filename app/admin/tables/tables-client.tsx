@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Plus, Pencil, Trash2, Check, Grid, List, CheckCircle2, Users, CalendarClock, Receipt, Clock, Coffee, Calendar, Minus, Printer, CreditCard, X, Loader2 } from "lucide-react"
+import { Plus, Pencil, Trash2, Check, Grid, List, CheckCircle2, Users, CalendarClock, Receipt, Clock, Coffee, Calendar, Minus, Printer, CreditCard, X, Loader2, FileText } from "lucide-react"
 import { PageHeader } from "@/components/shared/page-header"
 import { DataTable } from "@/components/shared/data-table"
 import { Button } from "@/components/ui/button"
@@ -12,6 +12,13 @@ import { Label } from "@/components/ui/label"
 import { useToast } from "@/components/ui/use-toast"
 import { useRouter } from "next/navigation"
 import { ConfirmationModal } from "@/components/ui/confirmation-modal"
+import { jsPDF } from "jspdf"
+import html2canvas from "html2canvas"
+import { ReceiptPrint, formatMoney } from "@/components/pos/receipt-print"
+import { PaymentMethodPicker } from "@/components/pos/payment-method-picker"
+import { XenditQrisModal } from "@/components/pos/xendit-qris-modal"
+import { XenditEwalletModal } from "@/components/pos/xendit-ewallet-modal"
+import { XenditVaModal } from "@/components/pos/xendit-va-modal"
 
 function StatCard({ title, count }: { title: string, count: number }) {
   return (
@@ -40,7 +47,7 @@ function FilterTab({ active, onClick, children }: { active: boolean, onClick: ()
   );
 }
 
-export function TablesClient({ initialData, currentBranchId, isAllBranches = false, role = "STORE_ADMIN" }: { initialData: any[], currentBranchId: number, isAllBranches?: boolean, role?: string }) {
+export function TablesClient({ initialData, currentBranchId, isAllBranches = false, role = "STORE_ADMIN", branchName = "Cabang Utama", paymentMethods }: { initialData: any[], currentBranchId: number, isAllBranches?: boolean, role?: string, branchName?: string, paymentMethods?: any[] }) {
 
   const [viewMode, setViewMode] = React.useState<"grid" | "list">("grid")
   const [activeFilter, setActiveFilter] = React.useState('all')
@@ -75,6 +82,12 @@ export function TablesClient({ initialData, currentBranchId, isAllBranches = fal
   const [customerName, setCustomerName] = React.useState("")
   const [tableNote, setTableNote] = React.useState("")
   const [finishConfirmOpen, setFinishConfirmOpen] = React.useState(false)
+  const [lastTransaction, setLastTransaction] = React.useState<any>(null)
+
+  // Xendit Modals
+  const [xenditModalType, setXenditModalType] = React.useState<"QRIS"|"EWALLET"|"VA"|null>(null)
+  const [xenditData, setXenditData] = React.useState<any>(null)
+  const [xenditPaymentId, setXenditPaymentId] = React.useState<string | null>(null)
 
   const isKitchenReady = React.useMemo(() => {
     if (!sessionDetail || !sessionDetail.items || sessionDetail.items.length === 0) return true;
@@ -342,6 +355,52 @@ export function TablesClient({ initialData, currentBranchId, isAllBranches = fal
 
     setLoading(true)
     try {
+      if (paymentMethod !== "CASH" && paymentMethods) {
+        const methodObj = paymentMethods.find((m: any) => m.code === paymentMethod)
+        if (methodObj && methodObj.provider === 'XENDIT') {
+          const xenditRes = await fetch("/api/payments/xendit", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              tableSessionId: sessionDetail.id,
+              invoiceCode: `TBL-${sessionDetail.id}-${Date.now()}`,
+              amount: totalWithTax,
+              methodType: methodObj.type,
+              channelCode: methodObj.code.replace('_VA', ''),
+              customerPhone: "081234567890", // could ask for this if EWALLET
+            })
+          })
+          
+          const xenditData = await xenditRes.json()
+          if (!xenditRes.ok) throw new Error(xenditData.error || "Xendit request failed")
+
+          const xr = xenditData.data
+          setXenditPaymentId(xr.id)
+          
+          if (methodObj.type === "QR_CODE") {
+            setXenditData({ qrString: xr.actions?.[0]?.url || xr.payment_method?.qr_code?.channel_properties?.qr_string })
+            setXenditModalType("QRIS")
+            setLoading(false)
+            return
+          } else if (methodObj.type === "EWALLET") {
+            setXenditData({ actions: xr.actions, methodName: methodObj.name })
+            setXenditModalType("EWALLET")
+            setLoading(false)
+            return
+          } else if (methodObj.type === "VIRTUAL_ACCOUNT") {
+            setXenditData({ 
+              accountNumber: xr.payment_method?.virtual_account?.channel_properties?.virtual_account_number,
+              methodName: methodObj.name,
+              instructions: methodObj.instructions || []
+            })
+            setXenditModalType("VA")
+            setLoading(false)
+            return
+          }
+        }
+      }
+
+      // CASH Payment handling
       const res = await fetch("/api/table-sessions", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -349,14 +408,31 @@ export function TablesClient({ initialData, currentBranchId, isAllBranches = fal
           sessionId: sessionDetail.id,
           action: "pay",
           paymentMethod,
-          cashAmount: paymentMethod === "CASH" ? Number(cashAmount) : 0
+          cashAmount: Number(cashAmount)
         })
       })
+      
+      const jsonResponse = await res.json()
       if (!res.ok) {
-        const err = await res.json()
-        throw new Error(err.error || "Gagal memproses pembayaran")
+        throw new Error(jsonResponse.error || "Gagal memproses pembayaran")
       }
+      
       toast("Pembayaran berhasil! Sesi meja telah ditutup.", "success")
+      
+      const receiptData = {
+        invoiceId: `TBL-${sessionDetail.id}`,
+        orderType: "DINE_IN",
+        tableNumber: actionTable.table_number,
+        subtotal: sessionDetail.subtotal || 0,
+        taxAmount: sessionDetail.tax_amount || (Number(sessionDetail.grand_total) * 0.11),
+        discountAmount: sessionDetail.discount_amount || 0,
+        totalAmount: sessionDetail.grand_total || 0,
+        paymentMethod: paymentMethod,
+        cashAmount: paymentMethod === "CASH" ? Number(cashAmount) : Number(sessionDetail.grand_total || 0),
+        items: sessionDetail.items || []
+      }
+
+      setLastTransaction(receiptData)
       setPaymentModalOpen(false)
       setActionTable(null)
       setPanelMode(null)
@@ -367,6 +443,28 @@ export function TablesClient({ initialData, currentBranchId, isAllBranches = fal
       toast(e.message, "error")
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleDownloadPDF = async () => {
+    const el = document.getElementById("receipt-print-area")
+    if (!el) return
+    try {
+      const canvas = await html2canvas(el, { scale: 2 })
+      const imgData = canvas.toDataURL("image/png")
+      
+      const pdfWidth = 80;
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: [pdfWidth, Math.max(100, pdfHeight)] 
+      })
+      
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight)
+      pdf.save(`Receipt-${lastTransaction?.invoiceId || 'TBL'}.pdf`)
+    } catch (e) {
+      toast("Failed to generate PDF", "error")
     }
   }
 
@@ -401,7 +499,8 @@ export function TablesClient({ initialData, currentBranchId, isAllBranches = fal
   ]
 
   return (
-    <div className="flex-1 overflow-y-auto font-sans text-foreground -m-3 sm:-m-6 p-4 sm:p-6 bg-background min-h-full">
+    <>
+    <div className="print:hidden flex-1 overflow-y-auto font-sans text-foreground -m-3 sm:-m-6 p-4 sm:p-6 bg-background min-h-full">
 
       {/* HEADER ROW */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 pb-4 border-b border-border">
@@ -628,9 +727,9 @@ export function TablesClient({ initialData, currentBranchId, isAllBranches = fal
               onChange={e => setStatus(e.target.value)}
               className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
             >
-              <option value="AVAILABLE">AVAILABLE</option>
-              <option value="RESERVED">RESERVED</option>
-              <option value="OUT_OF_SERVICE">OUT OF SERVICE</option>
+              <option value="AVAILABLE">Available</option>
+              <option value="RESERVED">Reserved</option>
+              <option value="OUT_OF_SERVICE">Out of Service</option>
             </select>
           </div>
         </div>
@@ -930,16 +1029,21 @@ export function TablesClient({ initialData, currentBranchId, isAllBranches = fal
               {/* Payment Methods */}
               <div>
                 <label className="block text-[11px] font-bold text-foreground mb-1.5 uppercase tracking-wider">Metode Pembayaran</label>
-                <select
-                  value={paymentMethod}
-                  onChange={e => setPaymentMethod(e.target.value as any)}
-                  className="w-full bg-card px-3 py-2.5 rounded-lg border border-border focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary text-sm font-bold shadow-sm cursor-pointer"
-                >
-                  <option value="CASH">CASH</option>
-                  <option value="QRIS">QRIS</option>
-                  <option value="DEBIT">DEBIT</option>
-                  <option value="TRANSFER">TRANSFER</option>
-                </select>
+                {paymentMethods && paymentMethods.length > 0 ? (
+                  <PaymentMethodPicker
+                    methods={paymentMethods}
+                    selected={paymentMethod}
+                    onChange={(code) => setPaymentMethod(code as any)}
+                  />
+                ) : (
+                  <select
+                    value={paymentMethod}
+                    onChange={e => setPaymentMethod(e.target.value as any)}
+                    className="w-full bg-card px-3 py-2.5 rounded-lg border border-border focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary text-sm font-bold shadow-sm cursor-pointer"
+                  >
+                    <option value="CASH">CASH</option>
+                  </select>
+                )}
               </div>
 
               {/* Cash Input */}
@@ -959,7 +1063,7 @@ export function TablesClient({ initialData, currentBranchId, isAllBranches = fal
                       className="w-full bg-card pl-9 pr-3 py-2.5 rounded-lg border border-border focus:border-primary focus:outline-none text-lg font-bold shadow-sm"
                     />
                   </div>
-                  
+
                   {/* Quick Money Buttons */}
                   <div className="flex gap-2 mt-2.5">
                     {[10000, 20000, 50000, 100000].map(amount => (
@@ -1000,7 +1104,7 @@ export function TablesClient({ initialData, currentBranchId, isAllBranches = fal
               </button>
               <button
                 onClick={handlePaySession}
-                disabled={loading || (paymentMethod === 'CASH' && Number(cashAmount) < (Number(sessionDetail?.grand_total || 0) * 1.11))}
+                disabled={loading || !paymentMethod || (paymentMethod === 'CASH' && Number(cashAmount) < (Number(sessionDetail?.grand_total || 0) * 1.11))}
                 className="flex-[2] py-2.5 rounded-lg bg-primary text-primary-foreground font-bold hover:bg-primary/90 transition-colors shadow-sm disabled:opacity-50 flex items-center justify-center gap-2 text-sm"
               >
                 {loading ? <Loader2 size={16} className="animate-spin" /> : <CreditCard size={16} />}
@@ -1011,6 +1115,152 @@ export function TablesClient({ initialData, currentBranchId, isAllBranches = fal
         </div>
       )}
 
+      {/* CHECKOUT SUCCESS MODAL */}
+      <Dialog open={!!lastTransaction} onOpenChange={(open) => {
+        if (!open) setLastTransaction(null)
+      }}>
+        <DialogHeader>
+          <DialogTitle className="text-center text-xl text-emerald-600 flex flex-col items-center gap-2 mt-4">
+            <CheckCircle2 size={48} />
+            Pembayaran Berhasil!
+          </DialogTitle>
+        </DialogHeader>
+        <div className="flex flex-col items-center justify-center py-6">
+          <p className="text-sm text-muted-foreground mb-1">Kembalian (Change)</p>
+          <p className="text-4xl font-black text-foreground">
+            {lastTransaction && formatMoney(Math.max(0, lastTransaction.cashAmount - lastTransaction.totalAmount))}
+          </p>
+        </div>
+        <DialogFooter className="flex-col sm:flex-row gap-2 mt-4">
+          <Button 
+            variant="outline" 
+            className="w-full gap-2 border-emerald-600 text-emerald-600 hover:bg-emerald-50"
+            onClick={handleDownloadPDF}
+          >
+            <FileText size={16} /> Download PDF
+          </Button>
+          <Button 
+            variant="outline" 
+            className="w-full gap-2 border-emerald-600 text-emerald-600 hover:bg-emerald-50"
+            onClick={() => window.print()}
+          >
+            <Printer size={16} /> Print Receipt
+          </Button>
+          <Button 
+            className="w-full gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
+            onClick={() => setLastTransaction(null)}
+          >
+            <Check size={16} /> Selesai
+          </Button>
+        </DialogFooter>
+      </Dialog>
+
+      {/* Xendit Modals */}
+      <XenditQrisModal
+        open={xenditModalType === "QRIS"}
+        onOpenChange={(o) => { if (!o) setXenditModalType(null) }}
+        paymentRequestId={xenditPaymentId}
+        qrString={xenditData?.qrString}
+        amount={Number(sessionDetail?.grand_total || 0) * 1.11}
+        onSuccess={() => {
+          setXenditModalType(null)
+          const receiptData = {
+            invoiceId: `TBL-${sessionDetail?.id || Date.now()}`,
+            orderType: "DINE_IN",
+            tableNumber: actionTable?.table_number,
+            subtotal: sessionDetail?.subtotal || 0,
+            taxAmount: sessionDetail?.tax_amount || (Number(sessionDetail?.grand_total) * 0.11),
+            discountAmount: sessionDetail?.discount_amount || 0,
+            totalAmount: Number(sessionDetail?.grand_total || 0) * 1.11,
+            paymentMethod: paymentMethod,
+            cashAmount: Number(sessionDetail?.grand_total || 0) * 1.11,
+            items: sessionDetail?.items || []
+          }
+          setLastTransaction(receiptData)
+          setPaymentModalOpen(false)
+          setActionTable(null)
+          setPanelMode(null)
+          setCashAmount("")
+          setPaymentMethod("CASH")
+          router.refresh()
+        }}
+        onCancel={() => setXenditModalType(null)}
+      />
+
+      <XenditEwalletModal
+        open={xenditModalType === "EWALLET"}
+        onOpenChange={(o) => { if (!o) setXenditModalType(null) }}
+        paymentRequestId={xenditPaymentId}
+        actions={xenditData?.actions}
+        amount={Number(sessionDetail?.grand_total || 0) * 1.11}
+        methodName={xenditData?.methodName || "E-Wallet"}
+        onSuccess={() => {
+          setXenditModalType(null)
+          const receiptData = {
+            invoiceId: `TBL-${sessionDetail?.id || Date.now()}`,
+            orderType: "DINE_IN",
+            tableNumber: actionTable?.table_number,
+            subtotal: sessionDetail?.subtotal || 0,
+            taxAmount: sessionDetail?.tax_amount || (Number(sessionDetail?.grand_total) * 0.11),
+            discountAmount: sessionDetail?.discount_amount || 0,
+            totalAmount: Number(sessionDetail?.grand_total || 0) * 1.11,
+            paymentMethod: paymentMethod,
+            cashAmount: Number(sessionDetail?.grand_total || 0) * 1.11,
+            items: sessionDetail?.items || []
+          }
+          setLastTransaction(receiptData)
+          setPaymentModalOpen(false)
+          setActionTable(null)
+          setPanelMode(null)
+          setCashAmount("")
+          setPaymentMethod("CASH")
+          router.refresh()
+        }}
+        onCancel={() => setXenditModalType(null)}
+      />
+
+      <XenditVaModal
+        open={xenditModalType === "VA"}
+        onOpenChange={(o) => { if (!o) setXenditModalType(null) }}
+        paymentRequestId={xenditPaymentId}
+        accountNumber={xenditData?.accountNumber}
+        amount={Number(sessionDetail?.grand_total || 0) * 1.11}
+        methodName={xenditData?.methodName || "Virtual Account"}
+        instructions={xenditData?.instructions || []}
+        onSuccess={() => {
+          setXenditModalType(null)
+          const receiptData = {
+            invoiceId: `TBL-${sessionDetail?.id || Date.now()}`,
+            orderType: "DINE_IN",
+            tableNumber: actionTable?.table_number,
+            subtotal: sessionDetail?.subtotal || 0,
+            taxAmount: sessionDetail?.tax_amount || (Number(sessionDetail?.grand_total) * 0.11),
+            discountAmount: sessionDetail?.discount_amount || 0,
+            totalAmount: Number(sessionDetail?.grand_total || 0) * 1.11,
+            paymentMethod: paymentMethod,
+            cashAmount: Number(sessionDetail?.grand_total || 0) * 1.11,
+            items: sessionDetail?.items || []
+          }
+          setLastTransaction(receiptData)
+          setPaymentModalOpen(false)
+          setActionTable(null)
+          setPanelMode(null)
+          setCashAmount("")
+          setPaymentMethod("CASH")
+          router.refresh()
+        }}
+        onCancel={() => setXenditModalType(null)}
+      />
+
     </div>
+
+    {/* RECEIPT PRINT AREA */}
+    <ReceiptPrint 
+      transaction={lastTransaction} 
+      branchName={branchName} 
+      cashierName="Admin" 
+      receiptId="receipt-print-area" 
+    />
+    </>
   )
 }

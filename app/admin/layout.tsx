@@ -68,7 +68,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         dineinEnabled={session?.dineinEnabled}
       />
       
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 print:w-full print:m-0 print:p-0">
         <Header 
           toggleSidebar={() => setOpen(!open)} 
           isDark={isDark} 
@@ -76,7 +76,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           open={open}
           role={session?.role}
         />
-        <main className="flex-1 p-3 sm:p-6 overflow-y-auto">
+        <main className="flex-1 p-3 sm:p-6 overflow-y-auto print:p-0 print:m-0 print:overflow-visible">
           {children}
         </main>
       </div>

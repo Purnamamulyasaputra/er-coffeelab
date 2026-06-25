@@ -459,6 +459,8 @@ export const orders = pgTable('orders', {
   cancelReason: text('cancel_reason'),
   paidAt: timestamp('paid_at', { withTimezone: true }),
   completedAt: timestamp('completed_at', { withTimezone: true }),
+  xenditPaymentId: varchar('xendit_payment_id', { length: 255 }),
+  xenditPaymentMethodId: varchar('xendit_payment_method_id', { length: 255 }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
 }, (table) => ({
   custIdx: index('idx_orders_customer').on(table.customerId, table.createdAt),

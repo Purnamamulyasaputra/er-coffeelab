@@ -90,9 +90,8 @@ export function ConfirmationModal({
           <X size={20} />
         </button>
 
-        {/* Ikon Utama */}
         <div className={`w-20 h-20 rounded-full flex items-center justify-center mb-6 border-8 ${currentTheme.iconBg} ${currentTheme.iconBorder}`}>
-          <div className="animate-pulse">
+          <div>
             {currentTheme.icon}
           </div>
         </div>

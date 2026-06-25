@@ -4,18 +4,19 @@ if (!process.env.DATABASE_URL) {
   throw new Error("DATABASE_URL is not set in environment variables");
 }
 
+neonConfig.fetchConnectionCache = true;
+
 // Global auto-retry fetch for Neon to handle ECONNRESET / transient network issues
 neonConfig.fetchFunction = async (url: string, init: RequestInit) => {
-  let retries = 3;
-  while (retries > 0) {
+  let retries = 2;
+  while (retries >= 0) {
     try {
-      return await fetch(url, init);
+      return await fetch(url, { ...init, keepalive: true });
     } catch (error: any) {
       const msg = error.message || "";
-      if (msg.includes('fetch failed') || msg.includes('ECONNRESET')) {
+      if ((msg.includes('fetch failed') || msg.includes('ECONNRESET') || msg.includes('Timeout')) && retries > 0) {
         retries--;
-        if (retries === 0) throw error;
-        await new Promise(res => setTimeout(res, 1000)); // Wait 1s before retry
+        await new Promise(res => setTimeout(res, 500)); // Wait 500ms before retry
       } else {
         throw error;
       }

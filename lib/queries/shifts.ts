@@ -5,6 +5,7 @@ export async function getShifts(branchId?: number) {
     return await sql`
       SELECT 
         s.id, 
+        e.id as employee_id,
         e.name as emp, 
         b.name as branch, 
         to_char(s.opened_at AT TIME ZONE 'Asia/Jakarta', 'HH24:MI') as open,
@@ -23,9 +24,10 @@ export async function getShifts(branchId?: number) {
   }
 
   return await sql`
-    SELECT 
-      s.id, 
-      e.name as emp, 
+      SELECT 
+        s.id, 
+        e.id as employee_id,
+        e.name as emp, 
       b.name as branch, 
       to_char(s.opened_at AT TIME ZONE 'Asia/Jakarta', 'HH24:MI') as open,
       COALESCE(to_char(s.closed_at AT TIME ZONE 'Asia/Jakarta', 'HH24:MI'), '-') as close,
