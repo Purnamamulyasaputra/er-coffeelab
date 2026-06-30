@@ -15,7 +15,7 @@ import { useToast } from "@/components/ui/use-toast"
 import { useRouter } from "next/navigation"
 import { ConfirmationModal } from "@/components/ui/confirmation-modal"
 
-export function DiscountsClient({ initialData }: { initialData: any[] }) {
+export function DiscountsClient({ initialData, role }: { initialData: any[], role?: string }) {
   const [open, setOpen] = React.useState(false)
   const [loading, setLoading] = React.useState(false)
   const { toast } = useToast()
@@ -65,7 +65,7 @@ export function DiscountsClient({ initialData }: { initialData: any[] }) {
         </Badge>
       )
     },
-    {
+    ...(role === "SUPERADMIN" ? [{
       header: "Actions",
       cell: (item: any) => (
         <div className="flex gap-1">
@@ -73,7 +73,7 @@ export function DiscountsClient({ initialData }: { initialData: any[] }) {
           <Button size="icon" className="h-[34px] w-[34px] bg-destructive hover:bg-destructive/90 text-white rounded-[10px]" onClick={() => { setDiscountToDelete(item); setDeleteModalOpen(true); }}><Trash2 size={14} /></Button>
         </div>
       )
-    }
+    }] : [])
   ]
 
   const handleSave = async () => {
@@ -135,9 +135,11 @@ export function DiscountsClient({ initialData }: { initialData: any[] }) {
         title="Discounts" 
         description="POS presets" 
         action={
-          <Button onClick={handleOpenAdd} className="gap-2">
-            <Plus size={14} /> Add
-          </Button>
+          role === "SUPERADMIN" ? (
+            <Button onClick={handleOpenAdd} className="gap-2">
+              <Plus size={14} /> Add
+            </Button>
+          ) : undefined
         } 
       />
       <DataTable data={initialData} columns={columns} keyExtractor={item => item.id.toString()} />

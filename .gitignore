@@ -70,3 +70,12 @@ drop_payment_status.js
 add_payment_status.js
 add-branch-id.ts
 query.ts
+drizzle/drop.ts
+fix_logos.ts
+fix_xendit_logos.ts
+alter_db.js
+backfill_passwords.ts
+check_attendance.js
+db_step_update_role.js
+db_step_update_role.ts
+query-payments.ts

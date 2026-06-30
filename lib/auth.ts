@@ -52,9 +52,9 @@ export async function requireAdmin() {
   const cookieStore = await cookies()
   const selectedBranchId = cookieStore.get("selectedBranchId")?.value
 
-  // If STORE_ADMIN, force their own branch
+  // If STORE_ADMIN or EMPLOYEE, force their own branch
   // If SUPERADMIN, use selected branch from cookie, or return null (all branches)
-  const resolvedBranchId = session.role === "STORE_ADMIN" 
+  const resolvedBranchId = (session.role === "STORE_ADMIN" || session.role === "EMPLOYEE")
     ? (session.branchId || 1) 
     : (selectedBranchId && selectedBranchId !== "all" ? Number(selectedBranchId) : null)
 

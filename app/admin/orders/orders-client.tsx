@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { RefreshCw, Volume2, Pencil, Trash2, X, Clock, MapPin, Phone, User, CheckCircle2, Monitor, ShoppingBag, CreditCard, Ban, Printer, Users, FileText, Check } from "lucide-react"
+import { RefreshCw, Volume2, Pencil, Trash2, X, Clock, MapPin, Phone, User, CheckCircle2, Monitor, ShoppingBag, CreditCard, Ban, Printer, Users, FileText, Check, Eye, Copy } from "lucide-react"
 import { jsPDF } from "jspdf"
 import html2canvas from "html2canvas"
 import { ReceiptPrint } from "@/components/pos/receipt-print"
@@ -146,9 +146,9 @@ function OrderDetailDrawer({ orderId, onClose, onStatusUpdate, role }: { orderId
   const handlePaymentSuccess = (dataOverride?: any) => {
     handleUpdateStatus('PAID')
     setPaymentModalOpen(false)
-    
+
     const pData = dataOverride || paymentData;
-    
+
     setLastTransaction({
       invoiceId: details.invoice_code,
       orderType: details.order_mode,
@@ -166,7 +166,7 @@ function OrderDetailDrawer({ orderId, onClose, onStatusUpdate, role }: { orderId
       cashAmount: Number(details.total_amount),
       paymentMethod: pData?.type || 'ONLINE',
     })
-    
+
     setCheckoutSuccessModalOpen(true)
     setPaymentData(null)
   }
@@ -201,14 +201,27 @@ function OrderDetailDrawer({ orderId, onClose, onStatusUpdate, role }: { orderId
         onClick={onClose}
       />
       {/* Drawer */}
-      <div className={`fixed right-0 top-0 h-full w-[425px] bg-card shadow-2xl z-50 transform transition-transform duration-300 flex flex-col ${orderId ? 'translate-x-0' : 'translate-x-full'}`}>
+      <div className={`fixed right-0 top-0 h-full w-[320px] bg-card shadow-2xl z-50 transform transition-transform duration-300 flex flex-col ${orderId ? 'translate-x-0' : 'translate-x-full'}`}>
         {orderId && (
           <>
             <div className="flex items-center justify-between p-4 bg-sidebar-hover-bg/30 border-b border-border">
               <div>
                 <div className="flex items-center gap-2 mb-1.5">
                   <ShoppingBag size={14} className="text-brand-blue dark:text-blue-400" />
-                  <h2 className="font-bold text-sm tracking-tight text-foreground">{orderId}</h2>
+                  <div className="flex items-center gap-1">
+                    <h2 className="font-bold text-sm tracking-tight text-foreground">{orderId}</h2>
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigator.clipboard.writeText(orderId);
+                        toast("Invoice code copied", "success");
+                      }}
+                      className="p-1 hover:bg-muted rounded text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                      title="Copy Invoice"
+                    >
+                      <Copy size={12} />
+                    </button>
+                  </div>
                   {details && (
                     <Badge variant={getModeVariant(details.order_mode)} className="text-[9px] px-1.5 py-0 h-4 uppercase tracking-wider">
                       {formatStatus(details.order_mode)}
@@ -224,7 +237,7 @@ function OrderDetailDrawer({ orderId, onClose, onStatusUpdate, role }: { orderId
                     <span className="opacity-50 dark:opacity-100 dark:text-gray-500">•</span>
                     <span className="flex items-center gap-1">
                       <Clock size={10} className="dark:text-gray-300" />
-                      {new Date(details.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                      {new Date(details.created_at).toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-')} • {new Date(details.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
                     </span>
                   </div>
                 )}
@@ -241,7 +254,7 @@ function OrderDetailDrawer({ orderId, onClose, onStatusUpdate, role }: { orderId
                 <div className="space-y-3">
                   {/* Status Control */}
                   <div className="bg-sidebar-hover-bg/50 p-4 rounded-lg border border-border">
-                    <div className="grid grid-cols-[1fr_1fr_auto] gap-4">
+                    <div className={`grid gap-2.5 ${(!details.paid_at && details.status !== 'CANCELLED') ? 'grid-cols-[1fr_1fr_auto]' : 'grid-cols-2'}`}>
                       {/* Column 1: Order Status */}
                       <div className="space-y-2">
                         <div className="text-[10px] font-bold text-foreground/70 uppercase tracking-wider">Order Status</div>
@@ -249,7 +262,7 @@ function OrderDetailDrawer({ orderId, onClose, onStatusUpdate, role }: { orderId
                           <Badge variant={getStatusVariant(details.status)} className="text-[11px] px-2.5 py-0.5 h-6">
                             {details.status}
                           </Badge>
-                          {role !== "STORE_ADMIN" && (
+                          {role !== "STORE_ADMIN" && role !== "EMPLOYEE" && (
                             <select
                               className="bg-card border border-input rounded-md px-2 py-1.5 text-xs font-medium outline-none cursor-pointer disabled:opacity-50 w-full mt-1"
                               value={details.status}
@@ -276,46 +289,44 @@ function OrderDetailDrawer({ orderId, onClose, onStatusUpdate, role }: { orderId
                       </div>
 
                       {/* Column 3: Actions */}
-                      <div className="space-y-2">
-                        <div className="text-[10px] font-bold text-foreground/70 uppercase tracking-wider text-center">Actions</div>
-                        <div className="flex gap-2 justify-end">
-                          {!details.paid_at && details.status !== 'CANCELLED' && (
-                            <Button
-                              variant="default"
-                              size="sm"
-                              className="text-[10px] h-7 px-2.5 gap-1.5 bg-blue-950 hover:bg-blue-900 text-white"
-                              onClick={handleOpenPaymentModal}
-                              disabled={loadingPayment}
-                            >
-                              {loadingPayment ? (
-                                <RefreshCw className="w-3 h-3 animate-spin" />
-                              ) : (
-                                <CreditCard className="w-3 h-3" />
-                              )}
-                              <span>Bayar</span>
-                            </Button>
-                          )}
-                          {['PENDING', 'PROCESSING', 'NEW'].includes(details.status) && !details.paid_at && (
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              className="text-[10px] h-7 px-2.5 gap-1.5"
-                              onClick={() => {
-                                setCancelPresetReason(CANCEL_REASONS[0]);
-                                setCancelReason("");
-                                setCancelModalOpen(true);
-                              }}
-                            >
-                              <Ban className="w-3 h-3" />
-                              <span>Batal</span>
-                            </Button>
-                          )}
-                          {/* Fallback if no actions available */}
-                          {(details.paid_at || details.status === 'CANCELLED' || !['PENDING', 'PROCESSING', 'NEW'].includes(details.status)) && (
-                            <span className="text-xs text-muted-foreground italic mt-1 block text-center">Tidak ada aksi tersedia</span>
-                          )}
+                      {(!details.paid_at && details.status !== 'CANCELLED') && (
+                        <div className="space-y-2">
+                          <div className="text-[10px] font-bold text-foreground/70 uppercase tracking-wider text-center">Actions</div>
+                          <div className="flex gap-2 justify-end">
+                            {(!details.paid_at && details.status !== 'CANCELLED') && (
+                              <Button
+                                variant="default"
+                                size="sm"
+                                className="text-[10px] h-7 px-2.5 gap-1.5 bg-blue-950 hover:bg-blue-900 text-white"
+                                onClick={handleOpenPaymentModal}
+                                disabled={loadingPayment}
+                              >
+                                {loadingPayment ? (
+                                  <RefreshCw className="w-3 h-3 animate-spin" />
+                                ) : (
+                                  <CreditCard className="w-3 h-3" />
+                                )}
+                                <span>Bayar</span>
+                              </Button>
+                            )}
+                            {['PENDING', 'PROCESSING', 'NEW'].includes(details.status) && !details.paid_at && (
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                className="text-[10px] h-7 px-2.5 gap-1.5"
+                                onClick={() => {
+                                  setCancelPresetReason(CANCEL_REASONS[0]);
+                                  setCancelReason("");
+                                  setCancelModalOpen(true);
+                                }}
+                              >
+                                <Ban className="w-3 h-3" />
+                                <span>Batal</span>
+                              </Button>
+                            )}
+                          </div>
                         </div>
-                      </div>
+                      )}
                     </div>
                   </div>
 
@@ -364,7 +375,7 @@ function OrderDetailDrawer({ orderId, onClose, onStatusUpdate, role }: { orderId
                             </div>
                             <div className="text-[11px] text-foreground/80 flex items-center gap-1 mt-0.5">
                               <Clock size={10} />
-                              {new Date(log.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                              {new Date(log.created_at).toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-')} • {new Date(log.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                               {' • '}{log.actor_name ? `${log.actor_name} (${log.actor_role || log.actor_type})` : log.actor_type}
                             </div>
                             {log.notes && <div className="text-[10px] text-foreground/70 mt-0.5 italic leading-tight">{log.notes}</div>}
@@ -433,7 +444,7 @@ function OrderDetailDrawer({ orderId, onClose, onStatusUpdate, role }: { orderId
         onConfirm={handleCancelOrder}
         type="danger"
         title="Batalkan Pesanan?"
-        confirmText={updating ? "Membatalkan..." : "Konfirmasi Batalkan"}
+        confirmText={updating ? "Membatalkan..." : "Batalkan"}
         cancelText="Tutup"
         message={
           <div className="text-left mt-2">
@@ -441,7 +452,7 @@ function OrderDetailDrawer({ orderId, onClose, onStatusUpdate, role }: { orderId
               Pilih alasan pembatalan pesanan ini:
             </p>
             <select
-              className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring mb-3"
+              className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring mb-3 cursor-pointer"
               value={cancelPresetReason}
               onChange={(e) => setCancelPresetReason(e.target.value)}
               disabled={updating}
@@ -553,9 +564,22 @@ export function OrdersClient({ initialData, role }: { initialData: any[], role?:
     {
       header: "Invoice",
       cell: (item: any) => (
-        <span className="font-bold font-mono text-[11px] truncate max-w-[80px] block" title={item.id}>
-          {item.id}
-        </span>
+        <div className="flex items-center gap-1.5 group">
+          <span className="font-bold font-mono text-[11px] truncate max-w-[80px]" title={item.id}>
+            {item.id}
+          </span>
+          <button 
+            onClick={(e) => {
+              e.stopPropagation();
+              navigator.clipboard.writeText(item.id);
+              toast("Invoice code copied", "success");
+            }}
+            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-muted rounded text-muted-foreground hover:text-foreground cursor-pointer"
+            title="Copy Invoice"
+          >
+            <Copy size={11} />
+          </button>
+        </div>
       )
     },
     {
@@ -614,19 +638,21 @@ export function OrdersClient({ initialData, role }: { initialData: any[], role?:
             className="h-[28px] w-[28px] bg-[#2a2d4a] hover:bg-[#2a2d4a]/90 text-white rounded-[6px]"
             title="View Details & History"
           >
-            <Pencil size={11} />
+            <Eye size={11} />
           </Button>
-          <Button
-            size="icon"
-            onClick={() => {
-              setOrderToDelete(item);
-              setDeleteConfirmOpen(true);
-            }}
-            className="h-[28px] w-[28px] bg-destructive hover:bg-destructive/90 text-white rounded-[6px]"
-            title="Delete Order"
-          >
-            <Trash2 size={11} />
-          </Button>
+          {(!role || role !== 'EMPLOYEE' || ['PENDING', 'NEW'].includes(item.status)) && (
+            <Button
+              size="icon"
+              onClick={() => {
+                setOrderToDelete(item);
+                setDeleteConfirmOpen(true);
+              }}
+              className="h-[28px] w-[28px] bg-destructive hover:bg-destructive/90 text-white rounded-[6px]"
+              title="Delete Order"
+            >
+              <Trash2 size={11} />
+            </Button>
+          )}
         </div>
       )
     }

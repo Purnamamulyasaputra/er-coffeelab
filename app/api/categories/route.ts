@@ -3,6 +3,11 @@ import { createCategory } from "@/lib/queries/categories"
 
 export async function POST(request: NextRequest) {
   try {
+    const { requireAdmin } = await import("@/lib/auth");
+    const session = await requireAdmin();
+    if (session.role === 'EMPLOYEE') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
     const data = await request.json()
     
     if (!data.name) {

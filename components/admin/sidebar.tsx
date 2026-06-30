@@ -81,9 +81,37 @@ export function Sidebar({ open, setOpen, isMobile, role, userName, userEmail, di
       // Role-based filtering
       if (role === "STORE_ADMIN") {
         if (group.label === "SYSTEM") return null;
-        currentItems = currentItems.filter(item => 
-          !["employees", "attendance", "notifications", "taxconfig"].includes(item.id)
-        );
+        if (group.label === "MARKETING") {
+          currentItems = currentItems.filter(item => item.id === "vouchers");
+        } else {
+          currentItems = currentItems.filter(item => 
+            !["suppliers", "notifications", "taxconfig"].includes(item.id)
+          ).map(item => {
+            if (item.id === "branches") {
+              return { ...item, label: "Store Settings" }
+            }
+            return item
+          })
+        }
+      }
+
+      if (role === "EMPLOYEE") {
+        if (group.label === "OVERVIEW") return null;
+        if (group.label === "MARKETING") return null;
+        if (group.label === "CRM") return null;
+        if (group.label === "SYSTEM") return null;
+        if (group.label === "BRANCHES") {
+          currentItems = currentItems.filter(item => ["tables", "stock"].includes(item.id));
+        }
+        if (group.label === "POS MGMT") {
+          currentItems = currentItems.filter(item => ["shifts", "cash", "attendance", "refunds", "discounts"].includes(item.id));
+        }
+        if (group.label === "INVENTORY") {
+          currentItems = currentItems.filter(item => ["stockopname"].includes(item.id));
+        }
+        if (group.label === "MENU") {
+          return null;
+        }
       }
 
       // Branch config filtering removed so Tables is always visible
@@ -109,7 +137,7 @@ export function Sidebar({ open, setOpen, isMobile, role, userName, userEmail, di
                 <img src="/logo-light.png" alt="ER COFFEELAB" className="h-8 w-auto block dark:hidden" />
                 <img src="/logo-dark.png" alt="ER COFFEELAB" className="h-8 w-auto hidden dark:block" />
                 <div className="bg-brand-blue/10 border border-brand-blue/20 text-brand-blue dark:bg-blue-500/20 dark:border-blue-500/30 dark:text-blue-400 px-1.5 py-0.5 rounded text-[9px] font-extrabold uppercase tracking-widest whitespace-nowrap mt-0.5">
-                  {role === "SUPERADMIN" ? "Super Admin" : "Admin Outlet"}
+                  {role === "SUPERADMIN" ? "Super Admin" : role === "EMPLOYEE" ? "Kasir / Barista" : "Admin Outlet"}
                 </div>
               </div>
             </div>
@@ -141,6 +169,7 @@ export function Sidebar({ open, setOpen, isMobile, role, userName, userEmail, di
                 <Link 
                   key={item.id} 
                   href={item.href}
+                  prefetch={false}
                   className={cn(
                     "flex items-center gap-2.5 mx-1.5 my-[2px] rounded-md cursor-pointer transition-all duration-200 border-l-4",
                     open || isMobile ? "px-3 py-2 justify-start" : "py-2 justify-center px-0",
@@ -167,7 +196,7 @@ export function Sidebar({ open, setOpen, isMobile, role, userName, userEmail, di
             </div>
             <div className="overflow-hidden">
               <div className="text-[11px] font-semibold truncate">{userName || "Admin"}</div>
-              <div className="text-[9px] text-sidebar-muted truncate">{role === "SUPERADMIN" ? "Super Admin" : "Store Admin"} • {userEmail || ""}</div>
+              <div className="text-[9px] text-sidebar-muted truncate">{role === "SUPERADMIN" ? "Super Admin" : role === "EMPLOYEE" ? "Kasir / Barista" : "Store Admin"} • {userEmail || ""}</div>
             </div>
           </div>
         )}

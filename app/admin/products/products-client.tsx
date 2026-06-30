@@ -20,7 +20,7 @@ function formatMoney(amount: number) {
   return "Rp " + Number(amount).toLocaleString("id-ID")
 }
 
-export function ProductsClient({ initialData, categories }: { initialData: any[], categories: any[] }) {
+export function ProductsClient({ initialData, categories, role, activeBranchId }: { initialData: any[], categories: any[], role?: string, activeBranchId?: number }) {
   const [open, setOpen] = React.useState(false)
   const [loading, setLoading] = React.useState(false)
   const { toast } = useToast()
@@ -95,19 +95,25 @@ export function ProductsClient({ initialData, categories }: { initialData: any[]
     },
     {
       header: "Actions",
-      cell: (item: any) => (
-        <div className="flex gap-1">
-          <Button size="icon" className="h-[34px] w-[34px] bg-[#2a2d4a] hover:bg-[#2a2d4a]/90 text-white rounded-[10px]" onClick={() => openEditModal(item)}>
-            <Pencil size={14} />
-          </Button>
-          <Button size="icon" className="h-[34px] w-[34px] bg-destructive hover:bg-destructive/90 text-white rounded-[10px]" onClick={() => {
-            setDeleteId(item.id)
-            setDeleteModalOpen(true)
-          }}>
-            <Trash2 size={14} />
-          </Button>
-        </div>
-      )
+      cell: (item: any) => {
+        const canEdit = role === "SUPERADMIN" || (role === "STORE_ADMIN" && item.branch_id === activeBranchId)
+
+        if (!canEdit) return <span className="text-xs text-slate-400 italic">Global</span>
+
+        return (
+          <div className="flex gap-1">
+            <Button size="icon" className="h-[34px] w-[34px] bg-[#2a2d4a] hover:bg-[#2a2d4a]/90 text-white rounded-[10px]" onClick={() => openEditModal(item)}>
+              <Pencil size={14} />
+            </Button>
+            <Button size="icon" className="h-[34px] w-[34px] bg-destructive hover:bg-destructive/90 text-white rounded-[10px]" onClick={() => {
+              setDeleteId(item.id)
+              setDeleteModalOpen(true)
+            }}>
+              <Trash2 size={14} />
+            </Button>
+          </div>
+        )
+      }
     }
   ]
 
@@ -120,7 +126,7 @@ export function ProductsClient({ initialData, categories }: { initialData: any[]
       if (imageFile) {
         const formData = new FormData()
         formData.append('file', imageFile)
-        
+
         const resBlob = await fetch(`/api/upload`, {
           method: "POST",
           body: formData,
@@ -157,7 +163,8 @@ export function ProductsClient({ initialData, categories }: { initialData: any[]
           sku: finalSku,
           badge: badge === "None" ? "-" : badge,
           status: active ? "ACTIVE" : "INACTIVE",
-          image_url: finalImageUrl
+          image_url: finalImageUrl,
+          ...(role === "STORE_ADMIN" && activeBranchId ? { branch_id: activeBranchId } : {})
         })
       })
 
@@ -235,26 +242,26 @@ export function ProductsClient({ initialData, categories }: { initialData: any[]
           </div>
           <div className="flex flex-col gap-1.5">
             <Label>Price (Rp)</Label>
-            <Input 
-              type="text" 
-              placeholder="Price" 
-              value={price} 
+            <Input
+              type="text"
+              placeholder="Price"
+              value={price}
               onChange={e => {
                 const val = e.target.value.replace(/[^0-9]/g, '');
                 setPrice(val ? parseInt(val, 10).toLocaleString('id-ID') : "");
-              }} 
+              }}
             />
           </div>
           <div className="flex flex-col gap-1.5">
             <Label>Cost/COGS (Rp)</Label>
-            <Input 
-              type="text" 
-              placeholder="Cost" 
-              value={cost} 
+            <Input
+              type="text"
+              placeholder="Cost"
+              value={cost}
               onChange={e => {
                 const val = e.target.value.replace(/[^0-9]/g, '');
                 setCost(val ? parseInt(val, 10).toLocaleString('id-ID') : "");
-              }} 
+              }}
             />
           </div>
           <div className="flex flex-col gap-1.5">
@@ -262,19 +269,19 @@ export function ProductsClient({ initialData, categories }: { initialData: any[]
             <Select
               options={[
                 { label: "None", value: "None" },
-                { label: "BEST_SELLER", value: "BEST_SELLER" },
-                { label: "NEW", value: "NEW" },
-                { label: "POPULAR", value: "POPULAR" },
-                { label: "PROMO", value: "PROMO" }
+                { label: "Best Seller", value: "BEST_SELLER" },
+                { label: "New", value: "NEW" },
+                { label: "Popular", value: "POPULAR" },
+                { label: "Promo", value: "PROMO" }
               ]}
               value={badge} onChange={e => setBadge(e.target.value)}
             />
           </div>
           <div className="flex flex-col gap-1.5">
             <Label>Image (Max 2MB)</Label>
-            <Input 
-              type="file" 
-              accept="image/*" 
+            <Input
+              type="file"
+              accept="image/*"
               onChange={(e) => {
                 const file = e.target.files?.[0];
                 if (file) {
@@ -288,21 +295,30 @@ export function ProductsClient({ initialData, categories }: { initialData: any[]
                 } else {
                   setImageFile(null);
                 }
-              }} 
+              }}
             />
             {(imageUrl || imageFile) && (
-              <div className="mt-1 text-xs text-muted-foreground">
-                {imageFile ? `Selected: ${imageFile.name}` : "Image uploaded."}
+              <div className="mt-2 flex flex-col items-center gap-1">
+                <div className="w-24 h-24 sm:w-32 sm:h-32 relative rounded-md overflow-hidden border border-slate-200 shadow-sm">
+                  <img
+                    src={imageFile ? URL.createObjectURL(imageFile) : `/api/image?url=${encodeURIComponent(imageUrl)}`}
+                    alt="Product preview"
+                    className="object-cover w-full h-full bg-slate-50"
+                  />
+                </div>
+                <div className="text-xs text-muted-foreground text-center">
+                  {imageFile ? `Selected: ${imageFile.name}` : "Current image"}
+                </div>
               </div>
             )}
           </div>
           <div className="sm:col-span-2 flex flex-col gap-1.5">
             <Label>Description</Label>
-            <Textarea 
-              placeholder="Product description (optional)" 
-              value={description} 
-              onChange={e => setDescription(e.target.value)} 
-              rows={3} 
+            <Textarea
+              placeholder="Product description (optional)"
+              value={description}
+              onChange={e => setDescription(e.target.value)}
+              rows={3}
             />
           </div>
           <div className="sm:col-span-2 flex items-center gap-3 mt-2 mb-1">
@@ -311,17 +327,17 @@ export function ProductsClient({ initialData, categories }: { initialData: any[]
           </div>
         </div>
         <DialogFooter className="mt-4">
-          <Button 
-            variant="secondary" 
-            onClick={() => setOpen(false)} 
-            disabled={loading} 
+          <Button
+            variant="secondary"
+            onClick={() => setOpen(false)}
+            disabled={loading}
             className="bg-slate-600 hover:bg-slate-700 text-white border-0 font-medium px-6"
           >
             Cancel
           </Button>
-          <Button 
-            className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-6 disabled:opacity-50 disabled:cursor-not-allowed" 
-            onClick={handleSave} 
+          <Button
+            className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-6 disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={handleSave}
             disabled={loading || !name || !price}
           >
             <Check size={16} /> {loading ? "Saving..." : "Save"}
@@ -334,8 +350,8 @@ export function ProductsClient({ initialData, categories }: { initialData: any[]
         onClose={() => setDeleteModalOpen(false)}
         onConfirm={handleDelete}
         title="Delete Product"
-        message="Are you sure you want to delete this product? This action cannot be undone."
-        confirmText={loading ? "Deleting..." : "Yes, Delete"}
+        message="Are you sure you want to delete this product?"
+        confirmText={loading ? "Deleting..." : "Delete"}
         type="danger"
       />
     </div>

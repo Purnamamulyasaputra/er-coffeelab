@@ -35,8 +35,11 @@ export default async function AdminPOSPage() {
   }
 
   const { getEmployees } = await import("@/lib/queries/hr")
-  const branchEmployees = await getEmployees(branchId)
-  
+  let branchEmployees = await getEmployees(branchId)
+
+  if (session?.role === "EMPLOYEE" && session?.employeeId) {
+    branchEmployees = branchEmployees.filter((e: any) => e.id === session.employeeId);
+  }
   const { getShifts } = await import("@/lib/queries/shifts")
   const shifts = await getShifts(branchId)
   const activeShifts = shifts.filter((s: any) => s.status === 'OPEN')

@@ -6,11 +6,13 @@ export async function getCashMovements(branchId?: number) {
       SELECT 
         c.id,
         c.shift_id as "shiftId",
+        e.id as employee_id,
         e.name as employee,
         b.name as branch,
         c.type,
         c.amount,
         c.reason,
+        TO_CHAR(c.created_at AT TIME ZONE 'Asia/Jakarta', 'DD-MM-YYYY') as date,
         TO_CHAR(c.created_at AT TIME ZONE 'Asia/Jakarta', 'HH24:MI') as time
       FROM cash_movements c
       LEFT JOIN shifts s ON c.shift_id = s.id
@@ -24,11 +26,13 @@ export async function getCashMovements(branchId?: number) {
     SELECT 
       c.id,
       c.shift_id as "shiftId",
+      e.id as employee_id,
       e.name as employee,
       b.name as branch,
       c.type,
       c.amount,
       c.reason,
+      TO_CHAR(c.created_at AT TIME ZONE 'Asia/Jakarta', 'DD-MM-YYYY') as date,
       TO_CHAR(c.created_at AT TIME ZONE 'Asia/Jakarta', 'HH24:MI') as time
     FROM cash_movements c
     LEFT JOIN shifts s ON c.shift_id = s.id
@@ -38,7 +42,12 @@ export async function getCashMovements(branchId?: number) {
   `
 }
 
-export async function getActiveShift(branchId?: number) {
+export async function getActiveShift(branchId?: number, employeeId?: number) {
+  if (branchId && employeeId) {
+    return await sql`
+      SELECT * FROM shifts WHERE status = 'OPEN' AND branch_id = ${branchId} AND employee_id = ${employeeId} ORDER BY opened_at DESC LIMIT 1
+    `.then(res => res[0] || null)
+  }
   if (branchId) {
     return await sql`
       SELECT * FROM shifts WHERE status = 'OPEN' AND branch_id = ${branchId} ORDER BY opened_at DESC LIMIT 1

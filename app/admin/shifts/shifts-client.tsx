@@ -35,6 +35,7 @@ interface ShiftData {
   id: string | number;
   emp: string;
   branch: string;
+  date?: string;
   open: string;
   close: string | null;
   sales: number;
@@ -44,9 +45,9 @@ interface ShiftData {
 }
 
 export function ShiftsClient({
-  initialData, employees, branches, isAdmin, showBranchColumn
+  initialData, employees, branches, isAdmin = false, showBranchColumn = false, role
 }: {
-  initialData: any[], employees: any[], branches: any[], isAdmin?: boolean, showBranchColumn?: boolean
+  initialData: any[], employees: any[], branches: any[], isAdmin?: boolean, showBranchColumn?: boolean, role?: string
 }) {
   const [open, setOpen] = React.useState(false)
   const [loading, setLoading] = React.useState(false)
@@ -65,6 +66,7 @@ export function ShiftsClient({
     { header: "No", cell: (_: unknown, index: number) => index + 1 },
     { header: "Employee", accessorKey: "emp" as const },
     ...(showBranchColumn ? [{ header: "Branch", accessorKey: "branch" as const }] : []),
+    { header: "Date", accessorKey: "date" as const },
     { header: "Open", accessorKey: "open" as const },
     { header: "Close", accessorKey: "close" as const },
     { header: "Starting", cell: (item: ShiftData) => <span className="font-medium text-muted-foreground">{formatMoney(item.starting as number)}</span> },
@@ -108,9 +110,11 @@ export function ShiftsClient({
               <LogOut size={14} />
             </Button>
           )}
-          <Button size="icon" className="h-[34px] w-[34px] bg-[#2a2d4a] hover:bg-[#2a2d4a]/90 text-white rounded-[10px]" onClick={() => setOpen(true)}>
-            <Pencil size={14} />
-          </Button>
+          {role !== "EMPLOYEE" && item.status !== 'CLOSED' && (
+            <Button size="icon" className="h-[34px] w-[34px] bg-[#2a2d4a] hover:bg-[#2a2d4a]/90 text-white rounded-[10px]" onClick={() => setOpen(true)}>
+              <Pencil size={14} />
+            </Button>
+          )}
           {isAdmin && (
             <Button size="icon" className="h-[34px] w-[34px] bg-destructive hover:bg-destructive/90 text-white rounded-[10px]" onClick={() => handleDelete(item.id)}>
               <Trash2 size={14} />

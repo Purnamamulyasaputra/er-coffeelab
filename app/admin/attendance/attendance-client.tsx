@@ -18,9 +18,9 @@ function formatMoney(amount: number | string | null) {
 }
 
 export function AttendanceClient({
-  initialData, employees, branches
+  initialData, employees, branches, role
 }: {
-  initialData: any[], employees: any[], branches: any[]
+  initialData: any[], employees: any[], branches: any[], role?: string
 }) {
   const [open, setOpen] = React.useState(false)
   const [loading, setLoading] = React.useState(false)
@@ -41,7 +41,7 @@ export function AttendanceClient({
     { header: "Out", accessorKey: "out" as const },
     { header: "Hours", accessorKey: "hours" as const },
     { header: "Cost", cell: (item: any) => formatMoney(item.cost) },
-    {
+    ...(role !== "EMPLOYEE" ? [{
       header: "Actions",
       cell: (item: any) => (
         <div className="flex gap-1">
@@ -49,7 +49,7 @@ export function AttendanceClient({
           <Button size="icon" className="h-[34px] w-[34px] bg-destructive hover:bg-destructive/90 text-white rounded-[10px]" onClick={() => { setAttendanceToDelete(item); setDeleteModalOpen(true); }}><Trash2 size={14} /></Button>
         </div>
       )
-    }
+    }] : [])
   ]
 
   const employeeOptions = employees.map(e => ({ label: e.name, value: e.id.toString() }))

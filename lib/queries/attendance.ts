@@ -5,11 +5,12 @@ export async function getAttendance(branchId?: number) {
     return await sql`
       SELECT 
         a.id, 
+        e.id as employee_id,
         e.name as emp, 
         b.name as branch, 
-        to_char(a.clock_in, 'YYYY-MM-DD') as date,
-        to_char(a.clock_in, 'HH24:MI') as in,
-        COALESCE(to_char(a.clock_out, 'HH24:MI'), '-') as out,
+        to_char(a.clock_in AT TIME ZONE 'Asia/Jakarta', 'DD/MM/YYYY') as date,
+        to_char(a.clock_in AT TIME ZONE 'Asia/Jakarta', 'HH24:MI') as in,
+        COALESCE(to_char(a.clock_out AT TIME ZONE 'Asia/Jakarta', 'HH24:MI'), '-') as out,
         COALESCE(
           EXTRACT(HOUR FROM (a.clock_out - a.clock_in))::text || 'h', 
           '-'
@@ -28,11 +29,12 @@ export async function getAttendance(branchId?: number) {
   return await sql`
     SELECT 
       a.id, 
+      e.id as employee_id,
       e.name as emp, 
       b.name as branch, 
-      to_char(a.clock_in, 'YYYY-MM-DD') as date,
-      to_char(a.clock_in, 'HH24:MI') as in,
-      COALESCE(to_char(a.clock_out, 'HH24:MI'), '-') as out,
+      to_char(a.clock_in AT TIME ZONE 'Asia/Jakarta', 'DD/MM/YYYY') as date,
+      to_char(a.clock_in AT TIME ZONE 'Asia/Jakarta', 'HH24:MI') as in,
+      COALESCE(to_char(a.clock_out AT TIME ZONE 'Asia/Jakarta', 'HH24:MI'), '-') as out,
       COALESCE(
         EXTRACT(HOUR FROM (a.clock_out - a.clock_in))::text || 'h', 
         '-'

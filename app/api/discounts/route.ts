@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createDiscount } from "@/lib/queries/discounts"
+import { getSession } from "@/lib/auth"
 
 export async function POST(request: NextRequest) {
   try {
+    const session = await getSession("admin") as any
+    if (!session || session.role !== "SUPERADMIN") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
+    }
     const data = await request.json()
     
     if (!data.name || !data.type || !data.value || !data.scope) {

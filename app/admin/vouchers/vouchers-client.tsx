@@ -21,7 +21,7 @@ function generateVoucherCode(prefix = "ER") {
   return `${prefix}-${random}`
 }
 
-export function VouchersClient({ initialData }: { initialData: any[] }) {
+export function VouchersClient({ initialData, role }: { initialData: any[], role?: string }) {
   const [open, setOpen] = React.useState(false)
   const [loading, setLoading] = React.useState(false)
   const { toast } = useToast()
@@ -160,7 +160,7 @@ export function VouchersClient({ initialData }: { initialData: any[] }) {
         </Badge>
       )
     },
-    {
+    ...(role === "SUPERADMIN" ? [{
       header: "Actions",
       cell: (item: any) => (
         <div className="flex gap-1">
@@ -168,7 +168,7 @@ export function VouchersClient({ initialData }: { initialData: any[] }) {
           <Button size="icon" className="h-[34px] w-[34px] bg-destructive hover:bg-destructive/90 text-white rounded-[10px]" onClick={() => { setVoucherToDelete(item); setDeleteModalOpen(true); }}><Trash2 size={14} /></Button>
         </div>
       )
-    }
+    }] : [])
   ]
 
   return (
@@ -177,9 +177,11 @@ export function VouchersClient({ initialData }: { initialData: any[] }) {
         title="Vouchers" 
         description="Promo codes for customers" 
         action={
-          <Button onClick={handleOpenAdd} className="gap-2">
-            <Plus size={14} /> Add Voucher
-          </Button>
+          role === "SUPERADMIN" ? (
+            <Button onClick={handleOpenAdd} className="gap-2">
+              <Plus size={14} /> Add Voucher
+            </Button>
+          ) : undefined
         } 
       />
       <DataTable data={initialData} columns={columns} keyExtractor={item => item.id.toString()} />

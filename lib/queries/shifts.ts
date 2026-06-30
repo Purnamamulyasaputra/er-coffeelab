@@ -8,6 +8,7 @@ export async function getShifts(branchId?: number) {
         e.id as employee_id,
         e.name as emp, 
         b.name as branch, 
+        to_char(s.opened_at AT TIME ZONE 'Asia/Jakarta', 'DD-MM-YYYY') as date,
         to_char(s.opened_at AT TIME ZONE 'Asia/Jakarta', 'HH24:MI') as open,
         COALESCE(to_char(s.closed_at AT TIME ZONE 'Asia/Jakarta', 'HH24:MI'), '-') as close,
         s.opening_cash as starting,
@@ -29,6 +30,7 @@ export async function getShifts(branchId?: number) {
         e.id as employee_id,
         e.name as emp, 
       b.name as branch, 
+      to_char(s.opened_at AT TIME ZONE 'Asia/Jakarta', 'DD-MM-YYYY') as date,
       to_char(s.opened_at AT TIME ZONE 'Asia/Jakarta', 'HH24:MI') as open,
       COALESCE(to_char(s.closed_at AT TIME ZONE 'Asia/Jakarta', 'HH24:MI'), '-') as close,
       s.opening_cash as starting,
@@ -48,7 +50,8 @@ export async function createShift(data: {
   branch_id: number
   starting_cash: number
 }) {
-  return await sql`
+  // Insert Shift
+  const shift = await sql`
     INSERT INTO shifts (
       employee_id, branch_id, opened_at, opening_cash, expected_cash, status
     )
@@ -57,17 +60,30 @@ export async function createShift(data: {
     )
     RETURNING id
   `
+
+  // Insert Attendance
+  await sql`
+    INSERT INTO employee_attendances (
+      employee_id, branch_id, clock_in
+    )
+    VALUES (
+      ${data.employee_id}, ${data.branch_id}, NOW()
+    )
+  `
+
+  return shift
 }
 
 export async function closeShift(id: number, actualCash: number) {
-  // Get the shift to calculate difference
-  const shift = await sql`SELECT expected_cash FROM shifts WHERE id = ${id}`;
+  // Get the shift to calculate difference and find employee_id
+  const shift = await sql`SELECT expected_cash, employee_id FROM shifts WHERE id = ${id}`;
   if (!shift.length) throw new Error("Shift not found");
   
   const expectedCash = Number(shift[0].expected_cash);
   const diff = actualCash - expectedCash;
+  const empId = shift[0].employee_id;
   
-  return await sql`
+  const result = await sql`
     UPDATE shifts
     SET 
       closed_at = NOW(),
@@ -77,6 +93,17 @@ export async function closeShift(id: number, actualCash: number) {
     WHERE id = ${id}
     RETURNING id
   `;
+
+  // Update corresponding Attendance record
+  await sql`
+    UPDATE employee_attendances 
+    SET 
+      clock_out = NOW(),
+      total_hours = EXTRACT(EPOCH FROM (NOW() - clock_in))/3600
+    WHERE employee_id = ${empId} AND clock_out IS NULL
+  `;
+
+  return result;
 }
 
 export async function updateShift(id: number, actualCash: number, status: string, startingCash?: number) {

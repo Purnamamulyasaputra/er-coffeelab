@@ -45,7 +45,7 @@ export function POSNavbar() {
   const handleLogout = async () => {
     setIsLoggingOut(true);
     await fetch('/api/auth/logout', { method: 'POST' });
-    window.location.href = '/login';
+    window.location.href = '/pos-login';
   };
 
   return (

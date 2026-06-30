@@ -8,16 +8,23 @@ import { cookies } from "next/headers"
 export default async function AttendancePage() {
   const session = await getSession("admin") as any;
   const isAdmin = session?.role === "SUPERADMIN";
+  const role = session?.role;
+  const employeeId = session?.employeeId;
   
   const cookieStore = await cookies();
   const selectedBranchId = cookieStore.get("selectedBranchId")?.value;
   const branchId = !isAdmin ? Number(session.branchId) : (selectedBranchId ? Number(selectedBranchId) : undefined);
 
-  const [attendance, employees, branches] = await Promise.all([
+  let [attendance, employees, branches] = await Promise.all([
     getAttendance(branchId),
     getEmployees(branchId),
     getBranches(branchId)
   ])
+
+  if (role === "EMPLOYEE" && employeeId) {
+    attendance = attendance.filter(a => a.employee_id === employeeId);
+    employees = employees.filter((e: any) => e.id === employeeId);
+  }
   
-  return <AttendanceClient initialData={attendance} employees={employees} branches={branches} />
+  return <AttendanceClient initialData={attendance} employees={employees} branches={branches} role={role} />
 }

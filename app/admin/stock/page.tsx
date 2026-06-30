@@ -6,7 +6,7 @@ import { StockClient } from "./stock-client"
 import { requireAdmin } from "@/lib/auth"
 
 export default async function StockPage() {
-  const { resolvedBranchId } = await requireAdmin()
+  const { resolvedBranchId, role } = await requireAdmin()
   const branchId = resolvedBranchId || undefined
 
   
@@ -16,5 +16,5 @@ export default async function StockPage() {
     getBranches()
   ])
   
-  return <StockClient initialData={stock} products={products} branches={branches} currentBranchId={branchId} />
+  return <StockClient initialData={stock} products={products} branches={branches} currentBranchId={branchId} role={role} />
 }

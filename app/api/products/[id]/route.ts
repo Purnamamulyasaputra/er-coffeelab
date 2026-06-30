@@ -4,6 +4,11 @@ import { updateProduct, deleteProduct } from "@/lib/queries/products"
 export async function PUT(request: NextRequest, props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
   try {
+    const { requireAdmin } = await import("@/lib/auth");
+    const session = await requireAdmin();
+    if (session.role === 'EMPLOYEE') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
     const data = await request.json()
     const id = Number(params.id)
     
@@ -35,6 +40,9 @@ export async function DELETE(request: NextRequest, props: { params: Promise<{ id
   try {
     const { requireAdmin } = await import("@/lib/auth");
     const session = await requireAdmin();
+    if (session.role === 'EMPLOYEE') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
     const id = Number(params.id)
     await deleteProduct(id, session.resolvedBranchId || undefined)
     return NextResponse.json({ success: true })

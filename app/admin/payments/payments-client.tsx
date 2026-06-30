@@ -117,6 +117,12 @@ export function PaymentsClient({ initialData }: { initialData: any[] }) {
 
   const columns = [
     { header: "No", accessorKey: "id" as const },
+    { 
+      header: "Logo", 
+      cell: (item: any) => (
+        item.logo_url ? <img src={item.logo_url} alt={item.name} className="h-6 w-auto object-contain" /> : <div className="h-6 w-6 bg-muted rounded-full" />
+      )
+    },
     { header: "Code", accessorKey: "code" as const },
     { header: "Name", accessorKey: "name" as const },
     { 

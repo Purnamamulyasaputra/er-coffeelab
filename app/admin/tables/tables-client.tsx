@@ -511,14 +511,12 @@ export function TablesClient({ initialData, currentBranchId, isAllBranches = fal
         </div>
 
         <div className="flex items-center gap-2">
-          {role === "SUPERADMIN" && (
-            <button
-              onClick={() => setViewMode(v => v === "grid" ? "list" : "grid")}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-card border border-border text-foreground/90 rounded-md hover:bg-background transition-colors font-medium text-xs shadow-sm"
-            >
-              {viewMode === "grid" ? <><List size={14} /> <span>Manage Data</span></> : <><Grid size={14} /> <span>View Map</span></>}
-            </button>
-          )}
+          <button
+            onClick={() => setViewMode(v => v === "grid" ? "list" : "grid")}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-card border border-border text-foreground/90 rounded-md hover:bg-background transition-colors font-medium text-xs shadow-sm"
+          >
+            {viewMode === "grid" ? <><List size={14} /> <span>Manage Data</span></> : <><Grid size={14} /> <span>View Map</span></>}
+          </button>
 
           {viewMode === "list" && (
             <>

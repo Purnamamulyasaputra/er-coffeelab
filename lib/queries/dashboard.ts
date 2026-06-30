@@ -55,7 +55,11 @@ export async function getDashboardData(branchId?: number) {
   // 3. Payment Split
     sql`
       SELECT
-      COALESCE(pm.name, o.payment_method_code, 'Unknown') AS name,
+      CASE 
+        WHEN pm.name IS NOT NULL THEN pm.name
+        WHEN o.payment_method_code = 'XENDIT' THEN 'Online Payment'
+        ELSE COALESCE(o.payment_method_code, 'Unknown')
+      END AS name,
       COUNT(o.id)::int AS value
     FROM orders o
     LEFT JOIN payment_methods pm ON pm.code = o.payment_method_code

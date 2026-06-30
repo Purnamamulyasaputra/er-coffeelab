@@ -1,19 +1,14 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getActiveSessionsWithOrders } from "@/lib/queries/table-sessions"
-import { getSession } from "@/lib/auth"
+import { requireAdmin } from "@/lib/auth"
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getSession("admin") as any
-    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    const { resolvedBranchId } = await requireAdmin()
     
-    // Support branchId query param for superadmin, otherwise use session's branchId
+    // Support branchId query param for superadmin, otherwise use resolvedBranchId
     const queryBranchId = new URL(request.url).searchParams.get("branchId")
-    const branchId = queryBranchId ? Number(queryBranchId) : (session.branchId || 1)
-    
-    if (!branchId) {
-      return NextResponse.json({ error: "Branch ID required" }, { status: 400 })
-    }
+    const branchId = queryBranchId ? Number(queryBranchId) : (resolvedBranchId || undefined)
 
     const sessions = await getActiveSessionsWithOrders(branchId)
     return NextResponse.json({ data: sessions })

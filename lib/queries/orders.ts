@@ -23,7 +23,7 @@ export async function getOrders(branchId?: number) {
       LEFT JOIN employees e ON e.id = o.employee_id
       WHERE o.branch_id = ${branchId}
       ORDER BY o.created_at DESC
-      LIMIT 100
+      LIMIT 1000
     `
   }
 
@@ -47,11 +47,11 @@ export async function getOrders(branchId?: number) {
     LEFT JOIN store_tables t ON t.id = ts.table_id
     LEFT JOIN employees e ON e.id = o.employee_id
     ORDER BY o.created_at DESC
-    LIMIT 100
+    LIMIT 1000
   `
 }
 
-export async function getOrderDetails(invoiceCode: string) {
+export async function getOrderDetails(invoiceCode: string): Promise<any> {
   const orderResult = await sql`
     SELECT 
       o.*, 

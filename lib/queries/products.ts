@@ -59,7 +59,15 @@ export async function getPOSProducts(branchId: number) {
       p.badge, 
       p.image_url,
       p.status as product_status,
-      COALESCE(bps.stock_status, 'AVAILABLE') as stock_status
+      CASE
+        WHEN EXISTS (
+          SELECT 1 
+          FROM product_recipes pr
+          LEFT JOIN ingredient_stock ist ON pr.ingredient_id = ist.ingredient_id AND ist.branch_id = ${branchId}
+          WHERE pr.product_id = p.id AND COALESCE(ist.current_stock, 0) < pr.quantity_used
+        ) THEN 'OUT_OF_STOCK'
+        ELSE COALESCE(bps.stock_status, 'AVAILABLE')
+      END as stock_status
     FROM products p
     LEFT JOIN categories c ON p.category_id = c.id
     LEFT JOIN branch_product_stock bps ON p.id = bps.product_id AND bps.branch_id = ${branchId}

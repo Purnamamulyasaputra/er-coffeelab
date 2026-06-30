@@ -36,6 +36,13 @@
       "when": 1781855851980,
       "tag": "0004_panoramic_sleeper",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1782444592378,
+      "tag": "0005_flowery_prowler",
+      "breakpoints": true
     }
   ]
 }

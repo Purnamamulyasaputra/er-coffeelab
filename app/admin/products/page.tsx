@@ -12,5 +12,10 @@ export default async function ProductsPage() {
     getCategories()
   ])
   
-  return <ProductsClient initialData={products} categories={categories} />
+  return <ProductsClient 
+    initialData={products} 
+    categories={categories} 
+    role={session.role}
+    activeBranchId={branchId}
+  />
 }

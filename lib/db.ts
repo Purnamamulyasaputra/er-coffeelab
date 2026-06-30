@@ -4,7 +4,7 @@ if (!process.env.DATABASE_URL) {
   throw new Error("DATABASE_URL is not set in environment variables");
 }
 
-neonConfig.fetchConnectionCache = true;
+
 
 // Global auto-retry fetch for Neon to handle ECONNRESET / transient network issues
 neonConfig.fetchFunction = async (url: string, init: RequestInit) => {

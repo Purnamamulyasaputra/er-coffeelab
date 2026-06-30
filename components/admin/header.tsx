@@ -13,14 +13,21 @@ interface HeaderProps {
   toggleTheme: () => void;
   open?: boolean;
   role?: string;
+  hasActiveShift?: boolean;
 }
 
-export function Header({ toggleSidebar, isDark, toggleTheme, open, role }: HeaderProps) {
+export function Header({ toggleSidebar, isDark, toggleTheme, open, role, hasActiveShift }: HeaderProps) {
   const [logoutOpen, setLogoutOpen] = React.useState(false)
   const [isLoggingOut, setIsLoggingOut] = React.useState(false)
+  const [localHasActiveShift, setLocalHasActiveShift] = React.useState(hasActiveShift)
+  const [isCheckingShift, setIsCheckingShift] = React.useState(false)
 
   const router = useRouter()
   const [currentBranch, setCurrentBranch] = React.useState("all")
+
+  React.useEffect(() => {
+    setLocalHasActiveShift(hasActiveShift)
+  }, [hasActiveShift])
 
   React.useEffect(() => {
     import("@/app/actions/branch").then(mod => {
@@ -29,6 +36,22 @@ export function Header({ toggleSidebar, isDark, toggleTheme, open, role }: Heade
       })
     })
   }, [])
+
+  const handleLogoutClick = async () => {
+    setLogoutOpen(true);
+    if (role === 'EMPLOYEE') {
+      setIsCheckingShift(true);
+      try {
+        const res = await fetch('/api/auth/session', { cache: 'no-store' });
+        const data = await res.json();
+        setLocalHasActiveShift(data?.hasActiveShift);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setIsCheckingShift(false);
+      }
+    }
+  }
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
@@ -41,15 +64,25 @@ export function Header({ toggleSidebar, isDark, toggleTheme, open, role }: Heade
       localStorage.removeItem("pendingPosCart");
     }
     await fetch('/api/auth/logout', { method: 'POST' });
-    window.location.href = '/login';
+    
+    if (role === "EMPLOYEE") {
+      window.location.href = '/pos-login';
+    } else {
+      window.location.href = '/login';
+    }
   };
 
   const handleBranchChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newBranch = e.target.value;
     setCurrentBranch(newBranch);
     sessionStorage.setItem("er_selected_branch", newBranch);
+    
+    // Explicitly set cookie on client-side to ensure immediate availability for router.refresh()
+    document.cookie = `selectedBranchId=${newBranch}; path=/; max-age=2592000; SameSite=Lax`;
+    
     const { setBranchCookie } = await import("@/app/actions/branch");
     await setBranchCookie(newBranch);
+    
     mutate("/api/dashboard");
     mutate("/api/kds?branchId=1"); // Also revalidate KDS just in case
     router.refresh();
@@ -95,7 +128,7 @@ export function Header({ toggleSidebar, isDark, toggleTheme, open, role }: Heade
 
         <button
           type="button"
-          onClick={() => setLogoutOpen(true)}
+          onClick={handleLogoutClick}
           className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-destructive/30 bg-destructive/10 text-destructive text-xs hover:bg-destructive/20 transition-colors cursor-pointer"
         >
           <span className="hidden sm:inline">Logout</span>
@@ -107,27 +140,46 @@ export function Header({ toggleSidebar, isDark, toggleTheme, open, role }: Heade
           <div className="w-12 h-12 bg-destructive/10 text-destructive rounded-full flex items-center justify-center mb-4">
             <AlertTriangle size={20} />
           </div>
-          <h2 className="text-[16px] font-bold text-foreground mb-1.5">Logout?</h2>
+          <h2 className="text-[16px] font-bold text-foreground mb-1.5">
+            {role === 'EMPLOYEE' && localHasActiveShift ? "Shift Masih Aktif" : "Logout?"}
+          </h2>
           <div className="text-[12px] text-muted-foreground leading-relaxed mb-5 max-w-[240px] mx-auto">
-            Apakah anda yakin ingin keluar?
+            {isCheckingShift ? "Memeriksa status shift..." : (
+              role === 'EMPLOYEE' && localHasActiveShift 
+                ? "Anda masih memiliki shift yang sedang berjalan. Harap tutup shift terlebih dahulu sebelum melakukan logout." 
+                : "Apakah anda yakin ingin keluar?"
+            )}
           </div>
           <div className="flex w-full gap-2.5">
-            <Button
-              variant="outline"
-              className="flex-1 h-9 text-[12px] font-semibold rounded-lg"
-              onClick={() => setLogoutOpen(false)}
-              disabled={isLoggingOut}
-            >
-              Batal
-            </Button>
-            <Button
-              variant="destructive"
-              className="flex-1 h-9 text-[12px] font-semibold rounded-lg"
-              onClick={handleLogout}
-              disabled={isLoggingOut}
-            >
-              {isLoggingOut ? "Proses..." : "Logout"}
-            </Button>
+            {role === 'EMPLOYEE' && localHasActiveShift ? (
+              <Button
+                variant="outline"
+                className="flex-1 h-9 text-[12px] font-semibold rounded-lg"
+                onClick={() => { setLogoutOpen(false); router.push('/admin/shifts'); }}
+                disabled={isCheckingShift}
+              >
+                Ke Menu Shifts
+              </Button>
+            ) : (
+              <>
+                <Button
+                  variant="outline"
+                  className="flex-1 h-9 text-[12px] font-semibold rounded-lg"
+                  onClick={() => setLogoutOpen(false)}
+                  disabled={isLoggingOut}
+                >
+                  Batal
+                </Button>
+                <Button
+                  variant="destructive"
+                  className="flex-1 h-9 text-[12px] font-semibold rounded-lg"
+                  onClick={handleLogout}
+                  disabled={isLoggingOut}
+                >
+                  {isLoggingOut ? "Proses..." : "Logout"}
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </Dialog>

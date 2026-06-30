@@ -39,6 +39,8 @@ export interface POSSession {
   branchId?: number;
   branchName?: string;
   role?: string;
+  name?: string;
+  employeeId?: number;
 }
 
 export function POSTerminal({
@@ -70,11 +72,9 @@ export function POSTerminal({
   const [loading, setLoading] = React.useState(false)
   const [paymentMethod, setPaymentMethod] = React.useState("CASH")
   const [cashAmount, setCashAmount] = React.useState("")
-  const [isLocked, setIsLocked] = React.useState(session?.role !== 'SUPERADMIN')
-  const [pinInput, setPinInput] = React.useState("")
-  const [pinError, setPinError] = React.useState("")
-  const [cashierName, setCashierName] = React.useState(session?.role === 'SUPERADMIN' ? 'Super Admin' : 'Admin Outlet')
-  const [activeEmployeeId, setActiveEmployeeId] = React.useState<number | null>(null)
+  const [cashierName, setCashierName] = React.useState(session?.name || (session?.role === 'SUPERADMIN' ? 'Super Admin' : 'Admin Outlet'))
+  const [activeEmployeeId, setActiveEmployeeId] = React.useState<number | null>(session?.employeeId || null)
+  const isSuperAdmin = session?.role === "SUPERADMIN"
   const [isOnline, setIsOnline] = React.useState(true)
   const [queueCount, setQueueCount] = React.useState(0)
   const [activeCategory, setActiveCategory] = React.useState("ALL")
@@ -161,20 +161,11 @@ export function POSTerminal({
       if (d.data) setDiscounts(d.data)
     }).catch(console.error)
 
-    // Check for saved employee login
-    const savedEmpId = localStorage.getItem("pos_active_employee_id")
-    const savedEmpName = localStorage.getItem("pos_cashier_name")
-    if (savedEmpId && savedEmpName && session?.role !== 'SUPERADMIN') {
-      const hasActiveShift = activeShifts?.some(s => Number(s.employee_id) === Number(savedEmpId));
-      if (hasActiveShift) {
-        setActiveEmployeeId(Number(savedEmpId))
-        setCashierName(savedEmpName)
-        setIsLocked(false)
-      } else {
-        localStorage.removeItem("pos_active_employee_id")
-        localStorage.removeItem("pos_cashier_name")
-        setIsLocked(true)
-      }
+    // Removed PIN prompt logic.
+    // Ensure activeEmployeeId is updated if session changes.
+    if (session?.employeeId) {
+      setActiveEmployeeId(session.employeeId);
+      setCashierName(session.name || 'Kasir');
     }
 
     return () => {
@@ -268,54 +259,7 @@ export function POSTerminal({
     handleXenditReturn()
   }, [])
 
-  // Lock screen state
-  const isSuperAdmin = session?.role === "SUPERADMIN"
-
-  const handlePinSubmit = async () => {
-    setLoading(true)
-    try {
-      // Testing Mode Logic: Check against dynamically assigned test PINs (1000, 1001, etc.)
-      // In production, this MUST be an API call to verify bcrypt hashes.
-      if (branchEmployees && branchEmployees.length > 0) {
-        const matchedEmp = branchEmployees.find((emp, index) => {
-          const testPin = String(1001 + index).padStart(4, '0')
-          return testPin === pinInput
-        })
-
-        if (matchedEmp) {
-          const hasOpenShift = activeShifts && activeShifts.some(s => s.employee_id === matchedEmp.id)
-          if (!hasOpenShift) {
-            setPinError("Anda belum Open Shift. Buka shift di menu Shifts terlebih dahulu.")
-            setLoading(false)
-            return
-          }
-          setCashierName(matchedEmp.name)
-          setActiveEmployeeId(matchedEmp.id)
-          setIsLocked(false)
-          setPinError("")
-          localStorage.setItem("pos_active_employee_id", matchedEmp.id.toString())
-          localStorage.setItem("pos_cashier_name", matchedEmp.name)
-          toast(`Shift Opened: Welcome ${matchedEmp.name}`, "success")
-          return
-        }
-      } else if (pinInput === "1234") {
-        // Fallback if no employees loaded
-        setCashierName("Admin (Fallback)")
-        setActiveEmployeeId(null)
-        setIsLocked(false)
-        setPinError("")
-        toast("Shift Opened: Welcome Admin", "success")
-        return
-      }
-
-      setPinError("Invalid PIN")
-    } catch (err) {
-      setPinError("Connection error")
-    } finally {
-      setLoading(false)
-      setPinInput("")
-    }
-  }
+  // Removed handlePinSubmit function.
 
   // Background Sync when online
   React.useEffect(() => {
@@ -654,125 +598,7 @@ export function POSTerminal({
     }
   }
 
-  // Handle keyboard input for PIN
-  React.useEffect(() => {
-    if (!isLocked) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (loading) return;
-
-      if (e.key >= '0' && e.key <= '9') {
-        setPinInput(prev => prev.length < 4 ? prev + e.key : prev);
-      } else if (e.key === 'Backspace') {
-        setPinInput(prev => prev.slice(0, -1));
-      } else if (e.key === 'Enter' && pinInput.length === 4) {
-        // Trigger submit
-        const submitBtn = document.getElementById('pin-submit-btn');
-        if (submitBtn) submitBtn.click();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isLocked, loading, pinInput]);
-
-  if (isLocked) {
-    return (
-      <div className={`flex flex-col items-center justify-center bg-background ${!isEmbedded ? 'min-h-screen' : 'h-[calc(100vh-112px)] w-full'} p-4`}>
-        <div className="flex flex-col md:flex-row gap-6 items-start">
-          {/* PIN Lock Card */}
-          <div className="bg-card text-card-foreground p-5 sm:p-6 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.1)] w-full max-w-[260px] sm:max-w-[280px] text-center border border-border shrink-0">
-            <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-3 text-primary">
-              <UserCheck size={20} />
-            </div>
-            <h2 className="text-lg font-bold mb-1">Open Shift</h2>
-            <p className="text-muted-foreground mb-4 text-[12px]">Enter your PIN to continue</p>
-
-            <div className="flex justify-center gap-2 mb-4">
-              {[0, 1, 2, 3].map((i) => (
-                <div
-                  key={i}
-                  className={`w-3 h-3 rounded-full transition-all duration-300 ${pinInput.length > i
-                    ? 'bg-primary scale-110 shadow-sm'
-                    : 'bg-muted border border-border scale-100'
-                    }`}
-                />
-              ))}
-            </div>
-
-            <div className="h-5 mb-2">
-              {pinError && <p className="text-destructive text-xs font-medium animate-in fade-in slide-in-from-top-1">{pinError}</p>}
-            </div>
-
-            <div className="grid grid-cols-3 gap-2">
-              {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
-                <Button
-                  key={num}
-                  variant="ghost"
-                  className="h-12 w-full rounded-xl text-lg font-semibold bg-transparent hover:bg-muted active:scale-95 transition-all"
-                  onClick={() => setPinInput(prev => prev.length < 4 ? prev + num : prev)}
-                >
-                  {num}
-                </Button>
-              ))}
-              <Button
-                variant="ghost"
-                className="h-12 w-full rounded-xl text-lg font-semibold bg-transparent text-destructive hover:bg-destructive/10 hover:text-destructive active:scale-95 transition-all"
-                onClick={() => setPinInput(prev => prev.slice(0, -1))}
-              >
-                <RotateCcw size={18} />
-              </Button>
-              <Button
-                variant="ghost"
-                className="h-12 w-full rounded-xl text-lg font-semibold bg-transparent hover:bg-muted active:scale-95 transition-all"
-                onClick={() => setPinInput(prev => prev.length < 4 ? prev + "0" : prev)}
-              >
-                0
-              </Button>
-              <Button
-                id="pin-submit-btn"
-                className="h-12 w-full rounded-xl text-lg font-semibold bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm active:scale-95 transition-all"
-                disabled={pinInput.length !== 4 || loading}
-                onClick={handlePinSubmit}
-              >
-                {loading ? <Loader2 className="animate-spin" size={18} /> : <Check size={20} />}
-              </Button>
-            </div>
-          </div>
-
-          {/* Developer Testing Helper Card */}
-          {branchEmployees && branchEmployees.length > 0 && (
-            <div className="bg-card text-card-foreground p-5 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.1)] w-full max-w-[260px] sm:max-w-[280px] border border-border shrink-0">
-              <div className="flex items-center gap-2 mb-4 text-muted-foreground">
-                <Coffee size={16} />
-                <p className="text-[11px] uppercase font-bold">Testing Mode</p>
-              </div>
-              <p className="text-sm font-semibold mb-3">Employee PINs</p>
-              <div className="flex flex-col gap-2 max-h-[260px] overflow-y-auto pr-1 custom-scrollbar">
-                {branchEmployees.map((emp, index) => {
-                  const testPin = String(1001 + index).padStart(4, '0')
-                  return (
-                    <div
-                      key={emp.id}
-                      className="text-left px-3 py-2.5 text-[13px] rounded-xl bg-muted/50 flex justify-between items-center border border-border/50 gap-2"
-                    >
-                      <div className="flex flex-col min-w-0">
-                        <span className="font-semibold text-foreground truncate">{emp.name}</span>
-                        <span className="text-[10px] text-muted-foreground">{emp.role}</span>
-                      </div>
-                      <span className="text-[11px] font-bold text-primary bg-primary/10 px-2 py-1 rounded-md tracking-wider">
-                        {testPin}
-                      </span>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    )
-  }
+  // Removed keyboard PIN input listener and isLocked render block.
 
   return (
     <>
@@ -802,23 +628,12 @@ export function POSTerminal({
             {!isSuperAdmin && (
               <>
                 <div className="h-4 w-px bg-slate-200 dark:bg-slate-700 mx-1"></div>
-                <button
-                  onClick={() => {
-                    setIsLocked(true)
-                    localStorage.removeItem("pos_active_employee_id")
-                    localStorage.removeItem("pos_cashier_name")
-                    setActiveEmployeeId(null)
-                    setCashierName("Cashier")
-                  }}
-                  className="group flex items-center gap-2 pl-1.5 pr-3 py-1.5 rounded-full bg-background border border-border hover:bg-muted hover:border-primary/50 transition-all shadow-sm"
-                >
-                  <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0 group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                <div className="flex items-center gap-2 pl-1.5 pr-3 py-1.5 rounded-full bg-background border border-border shadow-sm">
+                  <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0">
                     <User size={12} />
                   </div>
                   <span className="text-[12px] font-bold text-foreground">{cashierName}</span>
-                  <div className="w-px h-3 bg-border mx-0.5"></div>
-                  <Lock size={12} className="text-muted-foreground group-hover:text-destructive transition-colors" />
-                </button>
+                </div>
               </>
             )}
           </div>

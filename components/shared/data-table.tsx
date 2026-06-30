@@ -76,6 +76,33 @@ export function DataTable<T>({ columns, data, keyExtractor, emptyMessage = "No r
   const startIndex = (currentPage - 1) * rowsPerPage
   const currentData = sortedData.slice(startIndex, startIndex + rowsPerPage)
 
+  const getVisiblePages = () => {
+    const delta = 1;
+    const range = [];
+    const rangeWithDots = [];
+    let l: number | undefined;
+
+    for (let i = 1; i <= totalPages; i++) {
+      if (i === 1 || i === totalPages || (i >= currentPage - delta && i <= currentPage + delta)) {
+        range.push(i);
+      }
+    }
+
+    for (let i of range) {
+      if (l !== undefined) {
+        if (i - l === 2) {
+          rangeWithDots.push(l + 1);
+        } else if (i - l !== 1) {
+          rangeWithDots.push('...');
+        }
+      }
+      rangeWithDots.push(i);
+      l = i;
+    }
+
+    return rangeWithDots;
+  };
+
   return (
     <div className="w-full">
       {/* Toolbar */}
@@ -203,13 +230,20 @@ export function DataTable<T>({ columns, data, keyExtractor, emptyMessage = "No r
             >
               <ChevronLeft size={16} />
             </button>
-            {Array.from({ length: totalPages }).map((_, i) => (
+            {getVisiblePages().map((page, i) => (
               <button 
                 key={i}
-                onClick={() => setCurrentPage(i + 1)}
-                className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-[13px] transition-colors cursor-pointer border ${currentPage === i + 1 ? 'bg-brand-blue border-brand-blue text-brand-blue-foreground' : 'bg-transparent border-border text-foreground hover:bg-muted'}`}
+                onClick={() => typeof page === 'number' && setCurrentPage(page)}
+                disabled={page === '...'}
+                className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-[13px] transition-colors border ${
+                  currentPage === page 
+                    ? 'bg-brand-blue border-brand-blue text-brand-blue-foreground cursor-default' 
+                    : page === '...' 
+                      ? 'bg-transparent border-transparent text-muted-foreground cursor-default' 
+                      : 'bg-transparent border-border text-foreground hover:bg-muted cursor-pointer'
+                }`}
               >
-                {i + 1}
+                {page}
               </button>
             ))}
             <button 

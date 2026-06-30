@@ -93,7 +93,7 @@ export const employees = pgTable('employees', {
   name: varchar('name', { length: 100 }).notNull(),
   phone: varchar('phone', { length: 20 }),
   email: varchar('email', { length: 150 }),
-  pinHash: varchar('pin_hash', { length: 255 }).notNull(),
+  passwordHash: varchar('password_hash', { length: 255 }).notNull(),
   role: varchar('role', { length: 50 }).default('BARISTA'),
   hourlyRate: bigint('hourly_rate', { mode: 'number' }).default(0),
   avatarUrl: varchar('avatar_url', { length: 500 }),

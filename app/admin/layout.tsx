@@ -4,20 +4,41 @@ import * as React from "react"
 import { Sidebar } from "@/components/admin/sidebar"
 import { Header } from "@/components/admin/header"
 import { TabSessionSync } from "@/components/admin/TabSessionSync"
+import { usePathname, useRouter } from "next/navigation"
+import { useToast } from "@/components/ui/use-toast"
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = React.useState(true)
   const [isMobile, setIsMobile] = React.useState(false)
   const [isDark, setIsDark] = React.useState(false)
   const [mounted, setMounted] = React.useState(false)
-  const [session, setSession] = React.useState<{role: string, name: string, email: string, dineinEnabled?: boolean} | null>(null)
+  const pathname = usePathname()
+  const router = useRouter()
+  const { toast } = useToast()
+  const [session, setSession] = React.useState<{role: string, name: string, email: string, dineinEnabled?: boolean, hasActiveShift?: boolean} | null>(null)
 
   React.useEffect(() => {
-    fetch('/api/auth/session')
+    const abortController = new AbortController()
+    
+    fetch('/api/auth/session', { signal: abortController.signal })
       .then(r => r.json())
-      .then(setSession)
-      .catch(() => {})
-  }, [])
+      .then(sess => {
+        setSession(sess)
+        if (sess?.role === 'EMPLOYEE' && sess?.hasActiveShift === false && !pathname.startsWith('/admin/shifts')) {
+          toast("Anda harus membuka shift terlebih dahulu", "error")
+          router.push('/admin/shifts')
+        }
+      })
+      .catch((e) => {
+        if (e.name !== 'AbortError') {
+          console.error("Session sync error:", e)
+        }
+      })
+      
+    return () => {
+      abortController.abort()
+    }
+  }, [pathname, router, toast])
 
   React.useEffect(() => {
     const handleResize = () => {
@@ -75,6 +96,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           toggleTheme={() => setIsDark(!isDark)} 
           open={open}
           role={session?.role}
+          hasActiveShift={session?.hasActiveShift}
         />
         <main className="flex-1 p-3 sm:p-6 overflow-y-auto print:p-0 print:m-0 print:overflow-visible">
           {children}

@@ -5,14 +5,18 @@ import { StockOpnameClient } from "./opname-client"
 import { requireAdmin } from "@/lib/auth"
 
 export default async function StockOpnamePage() {
-  const { resolvedBranchId } = await requireAdmin()
+  const { resolvedBranchId, role, employeeId } = await requireAdmin()
   const branchId = resolvedBranchId || undefined
 
-  const [opnames, employees, branches] = await Promise.all([
+  let [opnames, employees, branches] = await Promise.all([
     getStockOpnames(branchId),
     getEmployees(branchId),
     getBranches()
   ])
+
+  if (role === "EMPLOYEE" && employeeId) {
+    employees = employees.filter((e: any) => e.id === employeeId);
+  }
   
-  return <StockOpnameClient initialData={opnames} employees={employees} branches={branches} />
+  return <StockOpnameClient initialData={opnames} employees={employees} branches={branches} currentBranchId={branchId} />
 }

@@ -32,6 +32,16 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     const { id } = await params;
+    
+    if (session.role === 'EMPLOYEE') {
+      const order = await getOrderDetails(id);
+      if (!order) {
+        return NextResponse.json({ error: "Order not found" }, { status: 404 });
+      }
+      if (order.status !== 'PENDING' && order.status !== 'NEW') {
+        return NextResponse.json({ error: "Forbidden: Cannot delete processed/paid orders" }, { status: 403 });
+      }
+    }
     const success = await deleteOrder(id);
     if (!success) {
       return NextResponse.json({ error: "Order not found" }, { status: 404 });

@@ -18,7 +18,7 @@ import dynamic from "next/dynamic"
 
 const MapPicker = dynamic(() => import("@/components/shared/map-picker"), { ssr: false })
 
-export function BranchesClient({ initialData }: { initialData: any[] }) {
+export function BranchesClient({ initialData, role }: { initialData: any[], role?: string }) {
   const [open, setOpen] = React.useState(false)
   const [loading, setLoading] = React.useState(false)
   const [geocoding, setGeocoding] = React.useState(false)
@@ -146,6 +146,27 @@ export function BranchesClient({ initialData }: { initialData: any[] }) {
     }
   }
 
+  const handleToggleFeature = async (item: any, field: string, value: boolean) => {
+    const prevItems = [...initialData]
+    try {
+      // Optimistic update could go here, but let's just show loading toast
+      const payload = {
+        ...item,
+        [field]: value
+      }
+      const res = await fetch("/api/branches", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      })
+      if (!res.ok) throw new Error("Failed to update settings")
+      toast("Settings updated successfully", "success")
+      router.refresh()
+    } catch (err: any) {
+      toast(err.message, "error")
+    }
+  }
+
   const columns = [
     { header: "No", cell: (_: unknown, index: number) => index + 1 },
     { header: "Name", accessorKey: "name" as const },
@@ -163,12 +184,27 @@ export function BranchesClient({ initialData }: { initialData: any[] }) {
         </Badge>
       )
     },
-    { header: "Pickup", cell: (item: any) => item.pickup_enabled ? "Yes" : "No" },
-    { header: "Delivery", cell: (item: any) => item.delivery_enabled ? "Yes" : "No" },
-    { header: "Dine-In", cell: (item: any) => item.dinein_enabled ? "Yes" : "No" },
+    { 
+      header: "Pickup", 
+      cell: (item: any) => role === "STORE_ADMIN" ? 
+        <Switch checked={item.pickup_enabled} onChange={(e: any) => handleToggleFeature(item, 'pickup_enabled', e.target.checked)} /> 
+        : (item.pickup_enabled ? "Yes" : "No") 
+    },
+    { 
+      header: "Delivery", 
+      cell: (item: any) => role === "STORE_ADMIN" ? 
+        <Switch checked={item.delivery_enabled} onChange={(e: any) => handleToggleFeature(item, 'delivery_enabled', e.target.checked)} /> 
+        : (item.delivery_enabled ? "Yes" : "No") 
+    },
+    { 
+      header: "Dine-In", 
+      cell: (item: any) => role === "STORE_ADMIN" ? 
+        <Switch checked={item.dinein_enabled} onChange={(e: any) => handleToggleFeature(item, 'dinein_enabled', e.target.checked)} /> 
+        : (item.dinein_enabled ? "Yes" : "No") 
+    },
     { header: "Tax", cell: (item: any) => `${item.tax_rate}%` },
     { header: "Svc Charge", cell: (item: any) => `${item.service_charge_pct}%` },
-    {
+    ...(role === "STORE_ADMIN" ? [] : [{
       header: "Actions",
       cell: (item: any) => (
         <div className="flex gap-1">
@@ -176,7 +212,7 @@ export function BranchesClient({ initialData }: { initialData: any[] }) {
           <Button size="icon" className="h-[34px] w-[34px] bg-destructive hover:bg-destructive/90 text-white rounded-[10px]" onClick={() => handleDeleteClick(item)}><Trash2 size={14} /></Button>
         </div>
       )
-    }
+    }])
   ]
 
   const handleSave = async () => {
@@ -221,12 +257,14 @@ export function BranchesClient({ initialData }: { initialData: any[] }) {
   return (
     <div>
       <PageHeader
-        title="Branches"
-        description="Manage your coffee shop locations"
+        title={role === "STORE_ADMIN" ? "Store Settings" : "Branches"}
+        description={role === "STORE_ADMIN" ? "Manage your store configuration" : "Manage your coffee shop locations"}
         action={
-          <Button onClick={handleOpenAdd} className="gap-2">
-            <Plus size={14} /> Add Branch
-          </Button>
+          role !== "STORE_ADMIN" ? (
+            <Button onClick={handleOpenAdd} className="gap-2">
+              <Plus size={14} /> Add Branch
+            </Button>
+          ) : undefined
         }
       />
 

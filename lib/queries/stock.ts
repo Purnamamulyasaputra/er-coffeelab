@@ -7,8 +7,25 @@ export async function getBranchProductStock(branchId?: number) {
         bps.id,
         p.name as product,
         b.name as branch,
-        bps.stock_status as stock,
-        bps.stock_status as status
+        bps.stock_status as manual_status,
+        CASE
+          WHEN EXISTS (
+            SELECT 1 
+            FROM product_recipes pr
+            LEFT JOIN ingredient_stock ist ON pr.ingredient_id = ist.ingredient_id AND ist.branch_id = ${branchId}
+            WHERE pr.product_id = p.id AND COALESCE(ist.current_stock, 0) < pr.quantity_used
+          ) THEN 'OUT_OF_STOCK'
+          ELSE COALESCE(bps.stock_status, 'AVAILABLE')
+        END as stock,
+        CASE
+          WHEN EXISTS (
+            SELECT 1 
+            FROM product_recipes pr
+            LEFT JOIN ingredient_stock ist ON pr.ingredient_id = ist.ingredient_id AND ist.branch_id = ${branchId}
+            WHERE pr.product_id = p.id AND COALESCE(ist.current_stock, 0) < pr.quantity_used
+          ) THEN 'OUT_OF_STOCK'
+          ELSE COALESCE(bps.stock_status, 'AVAILABLE')
+        END as status
       FROM branch_product_stock bps
       JOIN products p ON bps.product_id = p.id
       JOIN branches b ON bps.branch_id = b.id
@@ -22,8 +39,25 @@ export async function getBranchProductStock(branchId?: number) {
       bps.id,
       p.name as product,
       b.name as branch,
-      bps.stock_status as stock,
-      bps.stock_status as status
+      bps.stock_status as manual_status,
+      CASE
+        WHEN EXISTS (
+          SELECT 1 
+          FROM product_recipes pr
+          LEFT JOIN ingredient_stock ist ON pr.ingredient_id = ist.ingredient_id AND ist.branch_id = bps.branch_id
+          WHERE pr.product_id = p.id AND COALESCE(ist.current_stock, 0) < pr.quantity_used
+        ) THEN 'OUT_OF_STOCK'
+        ELSE COALESCE(bps.stock_status, 'AVAILABLE')
+      END as stock,
+      CASE
+        WHEN EXISTS (
+          SELECT 1 
+          FROM product_recipes pr
+          LEFT JOIN ingredient_stock ist ON pr.ingredient_id = ist.ingredient_id AND ist.branch_id = bps.branch_id
+          WHERE pr.product_id = p.id AND COALESCE(ist.current_stock, 0) < pr.quantity_used
+        ) THEN 'OUT_OF_STOCK'
+        ELSE COALESCE(bps.stock_status, 'AVAILABLE')
+      END as status
     FROM branch_product_stock bps
     JOIN products p ON bps.product_id = p.id
     JOIN branches b ON bps.branch_id = b.id

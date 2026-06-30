@@ -143,7 +143,7 @@ export function ContentClient({ initialStaticPages, initialMerchandise }: { init
       cell: (item: any) => (
         <div className="flex gap-1">
           <Button size="icon" onClick={() => handleOpenEditPage(item)} className="h-[34px] w-[34px] bg-[#2a2d4a] hover:bg-[#2a2d4a]/90 text-white rounded-[10px]"><Pencil size={14} /></Button>
-          <Button variant="ghost" size="icon" onClick={() => setDeleteConfirmInfo({id: item.id, type: 'page'})} className="h-7 w-7 text-destructive"><Trash2 size={14} /></Button>
+          <Button size="icon" onClick={() => setDeleteConfirmInfo({id: item.id, type: 'page'})} className="h-[34px] w-[34px] bg-destructive hover:bg-destructive/90 text-white rounded-[10px]"><Trash2 size={14} /></Button>
         </div>
       )
     }
@@ -186,7 +186,7 @@ export function ContentClient({ initialStaticPages, initialMerchandise }: { init
       cell: (item: any) => (
         <div className="flex gap-1">
           <Button size="icon" onClick={() => handleOpenEditMerch(item)} className="h-[34px] w-[34px] bg-[#2a2d4a] hover:bg-[#2a2d4a]/90 text-white rounded-[10px]"><Pencil size={14} /></Button>
-          <Button variant="ghost" size="icon" onClick={() => setDeleteConfirmInfo({id: item.id, type: 'merch'})} className="h-7 w-7 text-destructive"><Trash2 size={14} /></Button>
+          <Button size="icon" onClick={() => setDeleteConfirmInfo({id: item.id, type: 'merch'})} className="h-[34px] w-[34px] bg-destructive hover:bg-destructive/90 text-white rounded-[10px]"><Trash2 size={14} /></Button>
         </div>
       )
     }
@@ -211,13 +211,13 @@ export function ContentClient({ initialStaticPages, initialMerchandise }: { init
       <div className="flex gap-1 bg-card p-1 border border-border rounded-xl w-fit mb-6">
         <button
           onClick={() => setActiveTab('PAGES')}
-          className={`px-6 py-2 rounded-lg text-[13px] font-semibold transition-all ${activeTab === 'PAGES' ? 'bg-[#6c72cb] text-white shadow-md' : 'text-muted-foreground hover:text-foreground'}`}
+          className={`px-6 py-2 rounded-lg text-[13px] font-semibold transition-all ${activeTab === 'PAGES' ? 'bg-[#1e3a8a] text-white shadow-md' : 'text-muted-foreground hover:text-foreground'}`}
         >
           Static Pages
         </button>
         <button
           onClick={() => setActiveTab('MERCH')}
-          className={`px-6 py-2 rounded-lg text-[13px] font-semibold transition-all ${activeTab === 'MERCH' ? 'bg-[#6c72cb] text-white shadow-md' : 'text-muted-foreground hover:text-foreground'}`}
+          className={`px-6 py-2 rounded-lg text-[13px] font-semibold transition-all ${activeTab === 'MERCH' ? 'bg-[#1e3a8a] text-white shadow-md' : 'text-muted-foreground hover:text-foreground'}`}
         >
           Merchandise Catalog
         </button>

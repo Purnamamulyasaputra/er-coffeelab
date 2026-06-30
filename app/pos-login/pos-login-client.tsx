@@ -9,16 +9,23 @@ import {
   Lock,
   Eye,
   EyeOff,
-  LogIn
+  LogIn,
+  Store,
+  User
 } from "lucide-react";
 
-export default function LoginPage() {
+export default function PosLoginClient({ branches, employees }: { branches: any[], employees: any[] }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
+
+  // Selected testing branch
+  const [selectedBranch, setSelectedBranch] = useState(branches[0]?.id?.toString() || "");
+
+  const branchEmployees = employees.filter(e => e.branch_id.toString() === selectedBranch && e.status === 'ACTIVE');
 
   /* ── Light Palette ── */
   const brandBlue = "#1a1e4b";
@@ -57,7 +64,7 @@ export default function LoginPage() {
         sessionStorage.setItem("er_auth_token", data.token);
       }
 
-      router.push(data.redirect || "/admin/dashboard");
+      router.push(data.redirect || "/admin/pos");
     } catch (err: unknown) {
       setError((err as Error).message);
     } finally {
@@ -81,7 +88,7 @@ export default function LoginPage() {
           @import url('https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700;800&display=swap');
           * { box-sizing: border-box; margin: 0; }
           button:hover { filter: brightness(1.1); }
-          input:focus { border-color: ${brandAccent} !important; box-shadow: 0 0 0 3px ${brandAccent}22; }
+          input:focus, select:focus { border-color: ${brandAccent} !important; box-shadow: 0 0 0 3px ${brandAccent}22; }
           .input-container:focus-within svg { color: ${brandAccent} !important; }
           
           .layout-wrapper {
@@ -91,7 +98,7 @@ export default function LoginPage() {
             align-items: center;
             justify-content: center;
             width: 100%;
-            max-width: 800px;
+            max-width: 850px;
           }
           .login-card {
             width: 100%;
@@ -110,20 +117,22 @@ export default function LoginPage() {
           }
           .info-card {
             width: 100%;
+            flex: 1;
             max-width: 340px;
-            flex-shrink: 0;
             background: #f8fafc;
             border: 1px dashed #cbd5e1;
             border-radius: 16px;
-            padding: 24px;
+            padding: 20px;
             display: flex;
             flex-direction: column;
+            max-height: 480px;
           }
           @media (max-width: 850px) {
             .layout-wrapper {
               flex-direction: column;
               align-items: center;
             }
+            .info-card { max-width: 380px; }
           }
         `}
       </style>
@@ -135,7 +144,7 @@ export default function LoginPage() {
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 24 }}>
             <img src="/logo-light.png" alt="ER COFFEELAB" style={{ height: 38, width: "auto", marginBottom: 8 }} />
             <p style={{ color: textMuted, fontSize: 12, fontWeight: 600, textAlign: "center" }}>
-              Admin & Management Portal
+              Staff & POS Portal
             </p>
           </div>
 
@@ -148,12 +157,12 @@ export default function LoginPage() {
             )}
 
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              <label style={{ fontSize: 12, fontWeight: 700, color: textDark, marginLeft: 2 }}>Alamat Email</label>
+              <label style={{ fontSize: 12, fontWeight: 700, color: textDark, marginLeft: 2 }}>Alamat Email Pegawai</label>
               <div className="input-container" style={{ position: "relative" }}>
                 <Mail size={16} color={textMuted} style={{ position: "absolute", left: 12, top: 12, transition: "color 0.2s" }} />
                 <input
                   type="email"
-                  placeholder="admin@ercoffeelab.id"
+                  placeholder="kasir@ercoffeelab.id"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
@@ -176,7 +185,7 @@ export default function LoginPage() {
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <label style={{ fontSize: 12, fontWeight: 700, color: textDark, marginLeft: 2 }}>Kata Sandi</label>
-                <a href="#" style={{ fontSize: 11, fontWeight: 700, color: brandAccent, textDecoration: "none" }}>Lupa sandi?</a>
+                <a href="#" className="no-underline hover:no-underline" style={{ fontSize: 11, fontWeight: 700, color: brandAccent, textDecoration: "none" }}>Lupa sandi?</a>
               </div>
               <div className="input-container" style={{ position: "relative" }}>
                 <Lock size={16} color={textMuted} style={{ position: "absolute", left: 12, top: 12, transition: "color 0.2s" }} />
@@ -256,7 +265,7 @@ export default function LoginPage() {
               ) : (
                 <>
                   <LogIn size={16} />
-                  Masuk ke Sistem
+                  Masuk ke POS
                 </>
               )}
             </button>
@@ -266,62 +275,83 @@ export default function LoginPage() {
             <p style={{ fontSize: 10, fontWeight: 600, color: textMuted, marginBottom: 8 }}>
               Sistem Internal Terenkripsi &bull; Akses Terbatas
             </p>
-            <Link href="/pos-login" className="no-underline hover:no-underline" style={{ fontSize: 12, fontWeight: 700, color: textMuted, textDecoration: "none", display: "inline-block" }}>
-              Masuk sebagai Staff POS &rarr;
+            <Link href="/login" className="no-underline hover:no-underline" style={{ fontSize: 12, fontWeight: 700, color: textMuted, textDecoration: "none", display: "inline-block" }}>
+              &larr; Kembali ke Admin Portal
             </Link>
           </div>
         </div>
 
         {/* INFO CARD (TESTING CREDENTIALS) */}
         <div className="info-card">
-          <p style={{ fontSize: 13, fontWeight: 800, color: brandAccent, marginBottom: 16, letterSpacing: 0.5, display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={{ fontSize: 16 }}>🧪</span> TESTING CREDENTIALS
+          <p style={{ fontSize: 12, fontWeight: 800, color: brandAccent, marginBottom: 12, letterSpacing: 0.5, display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ fontSize: 14 }}>🧪</span> DAFTAR AKSES STAFF
           </p>
-          <p style={{ fontSize: 12, color: textMuted, marginBottom: 20, lineHeight: 1.5 }}>
-            Berikut adalah akses login untuk proses testing sistem ER Coffeelab. Gunakan kredensial di bawah ini:
+          <p style={{ fontSize: 11, color: textMuted, marginBottom: 16, lineHeight: 1.5 }}>
+            Pilih cabang untuk melihat akun pegawai yang memiliki akses login.
           </p>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: 16, fontSize: 12, color: textDark }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12, fontSize: 11, color: textDark, flex: 1, overflow: "hidden" }}>
 
-            {/* SUPER ADMIN */}
-            <div style={{ background: "#fff", border: "1px solid #e2e8f0", padding: 12, borderRadius: 8 }}>
-              <span style={{ fontWeight: 800, color: brandBlue, display: "block", marginBottom: 8, fontSize: 13 }}>Super Admin (Semua Cabang)</span>
-              <div style={{ display: "grid", gridTemplateColumns: "80px 1fr", gap: 4, alignItems: "center" }}>
-                <span style={{ color: textMuted, fontWeight: 600 }}>Email</span>
-                <span style={{ fontFamily: "monospace", background: "#f1f5f9", padding: "2px 6px", borderRadius: 4, fontWeight: 600, color: brandBlue, justifySelf: "start" }}>superadmin@ercoffeelab.id</span>
+            <div style={{ background: "#fff", border: "1px solid #e2e8f0", padding: 12, borderRadius: 8, display: "flex", flexDirection: "column", height: "100%" }}>
 
-                <span style={{ color: textMuted, fontWeight: 600 }}>Password</span>
-                <span style={{ fontFamily: "monospace", background: "#f1f5f9", padding: "2px 6px", borderRadius: 4, fontWeight: 600, color: brandBlue, justifySelf: "start" }}>admin123</span>
-              </div>
-            </div>
-
-            {/* ADMIN OUTLET (STORE ADMIN) */}
-            <div style={{ background: "#fff", border: "1px solid #e2e8f0", padding: 12, borderRadius: 8 }}>
-              <span style={{ fontWeight: 800, color: brandBlue, display: "block", marginBottom: 8, fontSize: 13 }}>Admin Outlet (Per Cabang)</span>
-              <p style={{ fontSize: 11, color: textMuted, marginBottom: 8, fontStyle: "italic" }}>Password untuk semua admin outlet: <strong style={{ fontFamily: "monospace", background: "#f1f5f9", padding: "1px 4px", borderRadius: 4, color: brandBlue }}>login123</strong></p>
-
-              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px dashed #e2e8f0", paddingBottom: 6 }}>
-                  <span style={{ fontWeight: 600, color: textDark }}>Cabang CBD Jakarta</span>
-                  <span style={{ fontFamily: "monospace", background: "#f1f5f9", padding: "2px 6px", borderRadius: 4, fontWeight: 600, color: brandBlue }}>cbd@ercoffeelab.id</span>
-                </div>
-                <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px dashed #e2e8f0", paddingBottom: 6 }}>
-                  <span style={{ fontWeight: 600, color: textDark }}>Cabang Grand Indonesia</span>
-                  <span style={{ fontFamily: "monospace", background: "#f1f5f9", padding: "2px 6px", borderRadius: 4, fontWeight: 600, color: brandBlue }}>gi@ercoffeelab.id</span>
-                </div>
-                <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px dashed #e2e8f0", paddingBottom: 6 }}>
-                  <span style={{ fontWeight: 600, color: textDark }}>Cabang Kemang</span>
-                  <span style={{ fontFamily: "monospace", background: "#f1f5f9", padding: "2px 6px", borderRadius: 4, fontWeight: 600, color: brandBlue }}>kemang@ercoffeelab.id</span>
-                </div>
-                <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px dashed #e2e8f0", paddingBottom: 6 }}>
-                  <span style={{ fontWeight: 600, color: textDark }}>Cabang BSD</span>
-                  <span style={{ fontFamily: "monospace", background: "#f1f5f9", padding: "2px 6px", borderRadius: 4, fontWeight: 600, color: brandBlue }}>bsd@ercoffeelab.id</span>
-                </div>
-                <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <span style={{ fontWeight: 600, color: textDark }}>Cabang Bandung</span>
-                  <span style={{ fontFamily: "monospace", background: "#f1f5f9", padding: "2px 6px", borderRadius: 4, fontWeight: 600, color: brandBlue }}>bandung@ercoffeelab.id</span>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 12 }}>
+                <label style={{ fontSize: 12, fontWeight: 700, color: textDark }}>Pilih Cabang</label>
+                <div style={{ position: "relative" }}>
+                  <Store size={16} color={brandBlue} style={{ position: "absolute", left: 12, top: 11 }} />
+                  <select
+                    value={selectedBranch}
+                    onChange={(e) => setSelectedBranch(e.target.value)}
+                    style={{
+                      width: "100%",
+                      padding: "8px 10px 8px 32px",
+                      borderRadius: 6,
+                      border: "1px solid " + border,
+                      background: "#f8fafc",
+                      color: textDark,
+                      fontSize: 12,
+                      fontWeight: 700,
+                      outline: "none",
+                      cursor: "pointer",
+                      appearance: "none"
+                    }}
+                  >
+                    {branches.map((b) => (
+                      <option key={b.id} value={b.id}>{b.name}</option>
+                    ))}
+                  </select>
+                  {/* Custom dropdown arrow */}
+                  <div style={{ position: "absolute", right: 12, top: 14, pointerEvents: "none" }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={textMuted} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                  </div>
                 </div>
               </div>
+
+              <div style={{ overflowY: "auto", flex: 1, paddingRight: 4, maxHeight: "180px" }}>
+                {branchEmployees.length === 0 ? (
+                  <div style={{ padding: 16, textAlign: "center", color: textMuted, fontSize: 11, fontStyle: "italic", background: "#f8fafc", borderRadius: 8, border: "1px dashed #cbd5e1" }}>
+                    Tidak ada pegawai dengan akses login di cabang ini.
+                  </div>
+                ) : (
+                  <>
+                    <span style={{ fontWeight: 800, color: brandBlue, display: "block", marginBottom: 6, fontSize: 12 }}>Daftar Kasir / Barista</span>
+                    <p style={{ fontSize: 10, color: textMuted, marginBottom: 8, fontStyle: "italic", lineHeight: 1.4 }}>
+                      <strong style={{ color: brandBlue }}>Password: kasir123</strong>
+                    </p>
+
+                    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                      {branchEmployees.map((emp, idx) => (
+                        <div key={emp.id} style={{ display: "flex", justifyContent: "space-between", borderBottom: idx === branchEmployees.length - 1 ? "none" : "1px dashed #e2e8f0", paddingBottom: 6 }}>
+                          <span style={{ fontWeight: 600, color: textDark }}>{emp.name}</span>
+                          <span style={{ fontFamily: "monospace", background: "#f1f5f9", padding: "2px 6px", borderRadius: 4, fontWeight: 600, color: brandBlue }}>
+                            {emp.email || "Belum ada email"}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+
             </div>
 
           </div>
@@ -330,4 +360,3 @@ export default function LoginPage() {
     </div>
   );
 }
-

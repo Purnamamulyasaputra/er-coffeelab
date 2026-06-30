@@ -19,12 +19,14 @@ export function StockClient({
   initialData, 
   products = [], 
   branches = [],
-  currentBranchId
+  currentBranchId,
+  role
 }: { 
   initialData: any[], 
   products?: any[], 
   branches?: any[],
-  currentBranchId?: number
+  currentBranchId?: number,
+  role?: string
 }) {
   const [open, setOpen] = React.useState(false)
   const [editId, setEditId] = React.useState<number | null>(null)
@@ -152,6 +154,7 @@ export function StockClient({
           <Switch 
             id={`stock-${item.id}`} 
             checked={item.status === "AVAILABLE"} 
+            disabled={role === "EMPLOYEE"}
             onChange={(e: any) => handleToggleStatus(item, e.target.checked)} 
           />
           <Label htmlFor={`stock-${item.id}`} className={`text-[12px] ${item.status === "AVAILABLE" ? "text-success font-bold" : "text-destructive font-bold"}`}>
@@ -160,7 +163,7 @@ export function StockClient({
         </div>
       )
     },
-    {
+    ...(role === "SUPERADMIN" ? [{
       header: "Actions",
       cell: (item: any) => (
         <div className="flex gap-1">
@@ -169,7 +172,7 @@ export function StockClient({
           </Button>
         </div>
       )
-    }
+    }] : [])
   ];
 
   const columns = currentBranchId 
@@ -182,9 +185,11 @@ export function StockClient({
         title="Stock Availability" 
         description="Per-branch availability" 
         action={
-          <Button onClick={() => setAddModalOpen(true)} className="gap-2">
-            <Plus size={14} /> Add Stock
-          </Button>
+          role === "SUPERADMIN" ? (
+            <Button onClick={() => setAddModalOpen(true)} className="gap-2">
+              <Plus size={14} /> Add Stock
+            </Button>
+          ) : undefined
         }
       />
 

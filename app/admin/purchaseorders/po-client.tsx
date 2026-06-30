@@ -44,6 +44,9 @@ export function PurchaseOrdersClient({
   const [deleteModalOpen, setDeleteModalOpen] = React.useState(false)
   const [deleteId, setDeleteId] = React.useState<string | null>(null)
 
+  const [markReceivedModalOpen, setMarkReceivedModalOpen] = React.useState(false)
+  const [markReceivedPoId, setMarkReceivedPoId] = React.useState<string | null>(null)
+
   const columns = [
     { header: "PO#", accessorKey: "id" as const },
     { header: "Supplier", accessorKey: "supplier" as const },
@@ -69,7 +72,7 @@ export function PurchaseOrdersClient({
             <Button
               size="icon"
               className="h-[34px] w-[34px] bg-emerald-600 hover:bg-emerald-700 text-white rounded-[10px]"
-              onClick={() => handleMarkReceived(item.id)}
+              onClick={() => { setMarkReceivedPoId(item.id); setMarkReceivedModalOpen(true); }}
               disabled={loading}
               title="Mark as Received"
             >
@@ -91,18 +94,19 @@ export function PurchaseOrdersClient({
   const branchOptions = branches.map(b => ({ label: b.name, value: b.id.toString() }))
   const ingredientOptions = ingredients.map(i => ({ label: `${i.name} (${i.unit})`, value: i.id.toString() }))
 
-  const handleMarkReceived = async (poNumber: string) => {
-    if (!confirm(`Are you sure you want to mark ${poNumber} as received? This will add stock to the branch.`)) return;
+  const handleMarkReceived = async () => {
+    if (!markReceivedPoId) return;
 
     setLoading(true);
     try {
-      const res = await fetch(`/api/purchaseorders/${poNumber}`, {
+      const res = await fetch(`/api/purchaseorders/${markReceivedPoId}`, {
         method: "PATCH",
       });
 
       if (!res.ok) throw new Error("Failed to update status");
 
       toast("PO marked as received! Stock has been added.", "success");
+      setMarkReceivedModalOpen(false);
       router.refresh();
     } catch (e: any) {
       toast(e.message, "error");
@@ -337,10 +341,20 @@ export function PurchaseOrdersClient({
         isOpen={deleteModalOpen}
         onClose={() => setDeleteModalOpen(false)}
         type="danger"
-        title="Delete Purchase Order"
-        message="Are you sure you want to delete this purchase order?ub"
+        title="Hapus Purchase Order"
+        message="Apakah Anda yakin ingin menghapus purchase order ini?"
         onConfirm={handleDelete}
-        confirmText={loading ? "Deleting..." : "Delete"}
+        confirmText={loading ? "Menghapus..." : "Hapus"}
+      />
+
+      <ConfirmationModal
+        isOpen={markReceivedModalOpen}
+        onClose={() => setMarkReceivedModalOpen(false)}
+        type="info"
+        title="Tandai Diterima"
+        message={`Apakah Anda yakin ingin menandai ${markReceivedPoId} sebagai diterima?`}
+        onConfirm={handleMarkReceived}
+        confirmText={loading ? "Memproses..." : "Ya"}
       />
     </div>
   )

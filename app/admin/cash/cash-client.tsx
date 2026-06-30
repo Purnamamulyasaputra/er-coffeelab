@@ -23,12 +23,14 @@ export function CashClient({
   initialData, 
   activeShift, 
   isAdmin, 
-  showBranchColumn 
+  showBranchColumn,
+  loggedInEmployeeId
 }: { 
   initialData: any[], 
   activeShift?: any,
   isAdmin?: boolean,
-  showBranchColumn?: boolean
+  showBranchColumn?: boolean,
+  loggedInEmployeeId?: number
 }) {
   const [open, setOpen] = React.useState(false)
   const [type, setType] = React.useState("IN")
@@ -57,7 +59,7 @@ export function CashClient({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           shiftId: activeShift.id,
-          employeeId: activeShift.employee_id,
+          employeeId: loggedInEmployeeId || activeShift.employee_id,
           type,
           amount: Number(amount),
           reason
@@ -114,6 +116,7 @@ export function CashClient({
         </div>
       )
     },
+    { header: "Date", accessorKey: "date" as const },
     { header: "Time", accessorKey: "time" as const },
     ...(isAdmin ? [{
       header: "Actions",
@@ -133,7 +136,14 @@ export function CashClient({
         title="Cash Management" 
         description="Petty cash movements and till adjustments" 
         action={
-          <Button onClick={() => setOpen(true)} className="gap-2" disabled={!activeShift}>
+          <Button onClick={() => {
+            if (!activeShift) {
+              toast("Anda harus membuka shift terlebih dahulu", "error")
+              router.push('/admin/shifts')
+            } else {
+              setOpen(true)
+            }
+          }} className="gap-2">
             <Plus size={14} />
             Add
           </Button>
@@ -150,11 +160,6 @@ export function CashClient({
           <DialogTitle>Add Cash Movement</DialogTitle>
         </DialogHeader>
         <div className="flex flex-col gap-3 py-2 overflow-y-auto px-1 max-h-[80vh]">
-          {!activeShift && (
-            <div className="bg-destructive/10 text-destructive p-3 rounded-md text-sm mb-2">
-              You cannot add cash movements without an active shift. Please open a shift first.
-            </div>
-          )}
           <div className="flex flex-col gap-1.5">
             <Label>Type</Label>
             <Select 
@@ -190,7 +195,7 @@ export function CashClient({
         </div>
         <DialogFooter>
           <Button variant="secondary" onClick={() => setOpen(false)} disabled={loading}>Cancel</Button>
-          <Button variant="default" className="gap-1.5" onClick={handleSave} disabled={loading || !activeShift}>
+          <Button variant="default" className="gap-1.5" onClick={handleSave} disabled={loading}>
             <Check size={14} /> {loading ? "Saving..." : "Save"}
           </Button>
         </DialogFooter>

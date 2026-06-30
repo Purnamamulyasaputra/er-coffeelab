@@ -32,7 +32,17 @@ function formatRole(role: string) {
   return role.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ');
 }
 
-export function EmployeesClient({ initialData, branches }: { initialData: any[], branches: any[] }) {
+export function EmployeesClient({
+  initialData,
+  branches,
+  role,
+  currentBranchId
+}: {
+  initialData: any[],
+  branches: any[],
+  role?: string,
+  currentBranchId?: number
+}) {
   const [open, setOpen] = React.useState(false)
   const [loading, setLoading] = React.useState(false)
   const { toast } = useToast()
@@ -40,10 +50,15 @@ export function EmployeesClient({ initialData, branches }: { initialData: any[],
 
   const [editId, setEditId] = React.useState<number | null>(null)
   const [name, setName] = React.useState("")
-  const [branchId, setBranchId] = React.useState(branches[0]?.id?.toString() || "")
-  const [role, setRole] = React.useState("BARISTA")
-  const [pin, setPin] = React.useState("")
+  const [branchId, setBranchId] = React.useState(currentBranchId ? currentBranchId.toString() : (branches[0]?.id?.toString() || ""))
+  const [employeeRole, setEmployeeRole] = React.useState("BARISTA")
+  const [password, setPassword] = React.useState("")
   const [rate, setRate] = React.useState("25000")
+  const [email, setEmail] = React.useState("")
+  const [phone, setPhone] = React.useState("")
+  const [status, setStatus] = React.useState("ACTIVE")
+  const [giveLoginAccess, setGiveLoginAccess] = React.useState(false)
+  const [loginPassword, setLoginPassword] = React.useState("")
 
   const [deleteModalOpen, setDeleteModalOpen] = React.useState(false)
   const [employeeToDelete, setEmployeeToDelete] = React.useState<any>(null)
@@ -51,20 +66,30 @@ export function EmployeesClient({ initialData, branches }: { initialData: any[],
   const handleOpenAdd = () => {
     setEditId(null)
     setName("")
-    setBranchId(branches.length === 1 ? branches[0]?.id?.toString() || "" : "")
-    setRole("")
-    setPin("")
-    setRate("")
+    setBranchId(currentBranchId ? currentBranchId.toString() : (branches.length === 1 ? branches[0]?.id?.toString() || "" : ""))
+    setEmployeeRole("BARISTA")
+    setPassword("")
+    setRate("25000")
+    setEmail("")
+    setPhone("")
+    setStatus("ACTIVE")
+    setGiveLoginAccess(false)
+    setLoginPassword("")
     setOpen(true)
   }
 
   const handleOpenEdit = (item: any) => {
     setEditId(item.id)
     setName(item.name)
-    setBranchId(item.branch_id?.toString() || (branches[0]?.id?.toString() || ""))
-    setRole(item.role)
-    setPin("")
+    setBranchId(item.branch_id?.toString() || (currentBranchId ? currentBranchId.toString() : (branches[0]?.id?.toString() || "")))
+    setEmployeeRole(item.role)
+    setPassword("")
     setRate(item.rate?.toString() || "0")
+    setEmail(item.email || "")
+    setPhone(item.phone || "")
+    setStatus(item.status || "ACTIVE")
+    setGiveLoginAccess(item.has_login || false)
+    setLoginPassword("")
     setOpen(true)
   }
 
@@ -78,13 +103,21 @@ export function EmployeesClient({ initialData, branches }: { initialData: any[],
         return <Badge variant={getRoleVariant(item.role)}>{formatRole(item.role)}</Badge>
       }
     },
+    {
+      header: "Login",
+      cell: (item: any) => (
+        item.has_login ? <Badge variant="success" className="bg-emerald-600">Yes</Badge> : <Badge variant="secondary">No</Badge>
+      )
+    },
     { header: "Rate/Hr", cell: (item: any) => formatMoney(item.rate) },
     {
       header: "Status",
       cell: (item: any) => (
-        <Badge variant={item.status === "ACTIVE" ? "success" : "destructive"}>
-          {item.status}
-        </Badge>
+        <Switch
+          checked={item.status === "ACTIVE"}
+          onCheckedChange={() => handleToggleStatus(item)}
+          disabled={loading}
+        />
       )
     },
     {
@@ -92,13 +125,31 @@ export function EmployeesClient({ initialData, branches }: { initialData: any[],
       cell: (item: any) => (
         <div className="flex gap-1">
           <Button size="icon" className="h-[34px] w-[34px] bg-[#2a2d4a] hover:bg-[#2a2d4a]/90 text-white rounded-[10px]" onClick={() => handleOpenEdit(item)}><Pencil size={14} /></Button>
-          <Button size="icon" className="h-[34px] w-[34px] bg-destructive hover:bg-destructive/90 text-white rounded-[10px]" onClick={() => { setEmployeeToDelete(item); setDeleteModalOpen(true); }}><Trash2 size={14} /></Button>
         </div>
       )
     }
   ]
 
   const branchOptions = branches.map(b => ({ label: b.name, value: b.id.toString() }))
+
+  const handleToggleStatus = async (item: any) => {
+    setLoading(true)
+    try {
+      const newStatus = item.status === "ACTIVE" ? "INACTIVE" : "ACTIVE"
+      const res = await fetch(`/api/employees/${item.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus })
+      })
+      if (!res.ok) throw new Error("Failed to update status")
+      toast(`Employee status updated to ${newStatus.toLowerCase()}`, "success")
+      router.refresh()
+    } catch (e: any) {
+      toast(e.message, "error")
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const handleSave = async () => {
     setLoading(true)
@@ -112,9 +163,14 @@ export function EmployeesClient({ initialData, branches }: { initialData: any[],
         body: JSON.stringify({
           name,
           branch_id: Number(branchId),
-          role,
-          ...(pin ? { pin } : {}),
-          rate: Number(rate)
+          role: employeeRole,
+          ...(password ? { password } : {}),
+          rate: Number(rate),
+          email,
+          phone,
+          status,
+          giveLoginAccess,
+          loginPassword: password || undefined
         })
       })
 
@@ -128,7 +184,7 @@ export function EmployeesClient({ initialData, branches }: { initialData: any[],
       router.refresh()
 
       setName("")
-      setPin("")
+      setPassword("")
     } catch (e: any) {
       toast(e.message, "error")
     } finally {
@@ -141,10 +197,11 @@ export function EmployeesClient({ initialData, branches }: { initialData: any[],
     setLoading(true)
     try {
       const res = await fetch(`/api/employees/${employeeToDelete.id}`, { method: "DELETE" })
+      const data = await res.json().catch(() => ({}))
       if (!res.ok) {
-        const err = await res.json().catch(() => ({}))
-        throw new Error(err.error || "Failed to delete employee")
+        throw new Error(data.error || "Failed to delete employee")
       }
+
       toast("Employee deleted successfully", "success")
       setDeleteModalOpen(false)
       router.refresh()
@@ -178,7 +235,7 @@ export function EmployeesClient({ initialData, branches }: { initialData: any[],
             <Label>Name</Label>
             <Input placeholder="Name" value={name} onChange={e => setName(e.target.value)} />
           </div>
-          {branches.length > 1 && (
+          {(!currentBranchId && branches.length > 1) && (
             <div className="flex flex-col gap-1.5">
               <Label>Branch</Label>
               <Select
@@ -197,13 +254,32 @@ export function EmployeesClient({ initialData, branches }: { initialData: any[],
                 { label: "Shift Lead", value: "SHIFT_LEAD" },
                 { label: "Manager", value: "MANAGER" }
               ]}
-              value={role}
-              onChange={e => setRole(e.target.value)}
+              value={employeeRole}
+              onChange={e => setEmployeeRole(e.target.value)}
             />
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label>PIN</Label>
-            <Input type="password" placeholder="4-6 digit PIN" maxLength={6} value={pin} onChange={e => setPin(e.target.value)} />
+            <Label>Email</Label>
+            <Input type="email" placeholder="pegawai@ercoffeelab.id" value={email} onChange={e => setEmail(e.target.value)} />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label>Phone Number</Label>
+            <Input type="tel" placeholder="08123456789" value={phone} onChange={e => setPhone(e.target.value)} />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label>Status</Label>
+            <Select
+              options={[
+                { label: "Active", value: "ACTIVE" },
+                { label: "Inactive", value: "INACTIVE" }
+              ]}
+              value={status}
+              onChange={e => setStatus(e.target.value)}
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label>Password</Label>
+            <Input type="password" placeholder={editId ? "Leave blank to keep unchanged" : "Password"} value={password} onChange={e => setPassword(e.target.value)} />
           </div>
           <div className="flex flex-col gap-1.5">
             <Label>Hourly Rate</Label>
@@ -221,6 +297,16 @@ export function EmployeesClient({ initialData, branches }: { initialData: any[],
               />
             </div>
           </div>
+
+          <div className="mt-4 pt-4 border-t border-border">
+            <div className="flex items-center justify-between mb-3">
+              <div className="space-y-0.5">
+                <Label>System Login Access</Label>
+                <p className="text-[11px] text-muted-foreground">Allow this employee to log in via /login.</p>
+              </div>
+              <Switch checked={giveLoginAccess} onCheckedChange={setGiveLoginAccess} />
+            </div>
+          </div>
         </div>
         <DialogFooter className="mt-4">
           <Button
@@ -234,7 +320,7 @@ export function EmployeesClient({ initialData, branches }: { initialData: any[],
           <Button
             className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-6 disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={handleSave}
-            disabled={loading || !name || !role || (!editId && !pin) || !rate || (branches.length > 1 && !branchId)}
+            disabled={loading || !name || !role || (!editId && !password) || !rate || (branches.length > 1 && !branchId) || (giveLoginAccess && !email)}
           >
             <Check size={16} /> {loading ? "Saving..." : "Save"}
           </Button>
@@ -246,7 +332,7 @@ export function EmployeesClient({ initialData, branches }: { initialData: any[],
         onClose={() => setDeleteModalOpen(false)}
         onConfirm={confirmDelete}
         title="Delete Employee"
-        message={<>Are you sure you want to delete <span className="font-bold text-white">{employeeToDelete?.name}</span>? This action cannot be undone.</>}
+        message={<>Are you sure you want to delete <span className="font-bold">{employeeToDelete?.name}</span>?</>}
         confirmText={loading ? "Deleting..." : "Delete"}
         type="danger"
       />

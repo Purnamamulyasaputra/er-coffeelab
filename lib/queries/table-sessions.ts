@@ -1,6 +1,6 @@
 import { sql } from "@/lib/db"
 
-export async function getActiveSessions(branchId: number) {
+export async function getActiveSessions(branchId?: number) {
   return await sql`
     SELECT 
       ts.*,
@@ -10,12 +10,12 @@ export async function getActiveSessions(branchId: number) {
     FROM table_sessions ts
     JOIN store_tables t ON t.id = ts.table_id
     LEFT JOIN employees e ON e.id = ts.opened_by
-    WHERE ts.branch_id = ${branchId} AND ts.status = 'OPEN'
+    WHERE (${branchId || null}::int IS NULL OR ts.branch_id = ${branchId || null}::int) AND ts.status = 'OPEN'
     ORDER BY ts.opened_at DESC
   `
 }
 
-export async function getActiveSessionsWithOrders(branchId: number) {
+export async function getActiveSessionsWithOrders(branchId?: number) {
   const sessions = await sql`
     SELECT 
       ts.*,
@@ -30,7 +30,7 @@ export async function getActiveSessionsWithOrders(branchId: number) {
     LEFT JOIN employees e ON e.id = ts.opened_by
     LEFT JOIN branches b ON b.id = ts.branch_id
     LEFT JOIN orders o ON o.table_session_id = ts.id AND o.status != 'CANCELLED' AND o.paid_at IS NULL
-    WHERE ts.branch_id = ${branchId} AND ts.status = 'OPEN'
+    WHERE (${branchId || null}::int IS NULL OR ts.branch_id = ${branchId || null}::int) AND ts.status = 'OPEN'
     GROUP BY ts.id, t.table_number, t.section, t.capacity, e.name, b.name
     ORDER BY ts.opened_at ASC
   `

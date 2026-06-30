@@ -17,7 +17,7 @@ function formatMoney(amount: number) {
   return "Rp " + Number(amount).toLocaleString("id-ID").replace(/,/g, '.')
 }
 
-export function RefundsClient({ initialData }: { initialData: any[] }) {
+export function RefundsClient({ initialData, role }: { initialData: any[], role?: string }) {
   const [open, setOpen] = React.useState(false)
   const [loading, setLoading] = React.useState(false)
   const { toast } = useToast()
@@ -52,7 +52,7 @@ export function RefundsClient({ initialData }: { initialData: any[] }) {
       )
     },
     { header: "By", accessorKey: "by" as const },
-    {
+    ...(role !== "EMPLOYEE" ? [{
       header: "Actions",
       cell: () => (
         <div className="flex gap-1">
@@ -60,7 +60,7 @@ export function RefundsClient({ initialData }: { initialData: any[] }) {
           <Button size="icon" className="h-[34px] w-[34px] bg-destructive hover:bg-destructive/90 text-white rounded-[10px]" onClick={() => toast("Deleted", "error")}><Trash2 size={14} /></Button>
         </div>
       )
-    }
+    }] : [])
   ]
 
   const handleSave = async () => {

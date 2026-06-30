@@ -35,10 +35,38 @@ export default async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL("/admin/dashboard", request.url))
     }
 
-    // Blokir akses ke halaman employees & attendance & notifications untuk STORE_ADMIN
-    const restrictedPaths = ['/admin/employees', '/admin/attendance', '/admin/notifications']
+    // Blokir akses ke halaman tertentu untuk STORE_ADMIN
+    const restrictedPaths = [
+      '/admin/notifications',
+      '/admin/suppliers',
+      '/admin/campaigns',
+      '/admin/banners',
+      '/admin/loyalty'
+    ]
     if (payload.role === 'STORE_ADMIN' && restrictedPaths.some(p => path.startsWith(p))) {
       return NextResponse.redirect(new URL("/admin/dashboard", request.url))
+    }
+
+    // Blokir akses EMPLOYEE ke halaman yang tidak diizinkan
+    const employeeAllowedPaths = [
+      '/admin/pos',
+      '/admin/kds',
+      '/admin/orders',
+      '/admin/products',
+      '/admin/tables',
+      '/admin/shifts',
+      '/admin/cash',
+      '/admin/attendance',
+      '/admin/refunds',
+      '/admin/discounts',
+      '/admin/stock',
+      '/admin/stockopname',
+    ]
+    if (payload.role === 'EMPLOYEE') {
+      const isAllowed = employeeAllowedPaths.some(p => path.startsWith(p))
+      if (!isAllowed) {
+        return NextResponse.redirect(new URL("/admin/pos", request.url))
+      }
     }
   }
 

@@ -5,16 +5,23 @@ import { cookies } from "next/headers"
 
 export default async function AdminCashPage() {
   const session = await getSession("admin") as any;
-  const isAdmin = session?.role === "SUPERADMIN";
+  const isSuperAdmin = session?.role === "SUPERADMIN";
+  const canManageCash = session?.role !== "EMPLOYEE";
+  const role = session?.role;
+  const employeeId = session?.employeeId;
   
   const cookieStore = await cookies();
   const selectedBranchId = cookieStore.get("selectedBranchId")?.value;
-  const branchId = !isAdmin ? Number(session.branchId) : (selectedBranchId ? Number(selectedBranchId) : undefined);
+  const branchId = !isSuperAdmin ? Number(session.branchId) : (selectedBranchId ? Number(selectedBranchId) : undefined);
 
-  const [movements, activeShift] = await Promise.all([
+  let [movements, activeShift] = await Promise.all([
     getCashMovements(branchId),
-    getActiveShift(branchId)
+    getActiveShift(branchId) // Don't filter active shift by employee, there's only one active shift per branch usually
   ])
+
+  if (role === "EMPLOYEE" && employeeId) {
+    movements = movements.filter(m => m.employee_id === employeeId);
+  }
 
   const showBranchColumn = !branchId;
 
@@ -23,8 +30,9 @@ export default async function AdminCashPage() {
       <CashClient 
         initialData={movements} 
         activeShift={activeShift}
-        isAdmin={isAdmin}
+        isAdmin={isSuperAdmin}
         showBranchColumn={showBranchColumn}
+        loggedInEmployeeId={employeeId}
       />
     </div>
   )

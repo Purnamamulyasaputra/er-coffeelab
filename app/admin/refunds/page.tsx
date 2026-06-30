@@ -6,6 +6,7 @@ import { cookies } from "next/headers"
 export default async function RefundsPage() {
   const session = await getSession("admin") as any;
   const isAdmin = session?.role === "SUPERADMIN";
+  const role = session?.role;
   
   const cookieStore = await cookies();
   const selectedBranchId = cookieStore.get("selectedBranchId")?.value;
@@ -13,5 +14,5 @@ export default async function RefundsPage() {
 
   const refunds = await getRefunds(branchId)
   
-  return <RefundsClient initialData={refunds} />
+  return <RefundsClient initialData={refunds} role={role} />
 }

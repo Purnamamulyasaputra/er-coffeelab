@@ -11,11 +11,12 @@ import { Label } from "@/components/ui/label"
 import { Select } from "@/components/ui/select"
 import { useToast } from "@/components/ui/use-toast"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 
 export function StockOpnameClient({ 
-  initialData, employees, branches 
+  initialData, employees, branches, currentBranchId 
 }: { 
-  initialData: any[], employees: any[], branches: any[] 
+  initialData: any[], employees: any[], branches: any[], currentBranchId?: number 
 }) {
   const [open, setOpen] = React.useState(false)
   const [loading, setLoading] = React.useState(false)
@@ -23,7 +24,7 @@ export function StockOpnameClient({
   const router = useRouter()
 
   const [employeeId, setEmployeeId] = React.useState(employees[0]?.id?.toString() || "")
-  const [branchId, setBranchId] = React.useState(branches[0]?.id?.toString() || "")
+  const [branchId, setBranchId] = React.useState(currentBranchId ? currentBranchId.toString() : (branches[0]?.id?.toString() || ""))
 
   const columns = [
     { header: "No", accessorKey: "id" as const },
@@ -42,9 +43,13 @@ export function StockOpnameClient({
     },
     {
       header: "Actions",
-      cell: () => (
+      cell: (item: any) => (
         <div className="flex gap-1">
-          <Button size="icon" className="h-[34px] w-[34px] bg-[#2a2d4a] hover:bg-[#2a2d4a]/90 text-white rounded-[10px]" onClick={() => setOpen(true)}><Pencil size={14} /></Button>
+          <Link href={`/admin/stockopname/${item.id}`}>
+            <Button size="icon" className="h-[34px] w-[34px] bg-[#2a2d4a] hover:bg-[#2a2d4a]/90 text-white rounded-[10px]">
+              <Pencil size={14} />
+            </Button>
+          </Link>
           <Button size="icon" className="h-[34px] w-[34px] bg-destructive hover:bg-destructive/90 text-white rounded-[10px]" onClick={() => toast("Deleted", "error")}><Trash2 size={14} /></Button>
         </div>
       )
@@ -95,11 +100,13 @@ export function StockOpnameClient({
         <DialogHeader>
           <DialogTitle>Start Stock Opname</DialogTitle>
         </DialogHeader>
-        <div className="flex flex-col gap-3 py-2 overflow-y-auto px-1 max-h-[80vh]">
-          <div className="flex flex-col gap-1.5">
-            <Label>Branch</Label>
-            <Select options={branchOptions} value={branchId} onChange={e => setBranchId(e.target.value)} />
-          </div>
+        <div className="flex flex-col gap-3 py-2 px-1">
+          {(!currentBranchId && branches.length > 1) && (
+            <div className="flex flex-col gap-1.5">
+              <Label>Branch</Label>
+              <Select options={branchOptions} value={branchId} onChange={e => setBranchId(e.target.value)} />
+            </div>
+          )}
           <div className="flex flex-col gap-1.5">
             <Label>Conducted By (Employee)</Label>
             <Select options={employeeOptions} value={employeeId} onChange={e => setEmployeeId(e.target.value)} />

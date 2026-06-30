@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Clock, CheckCircle2, ChevronRight, RefreshCw, AlertCircle, Coffee } from "lucide-react"
+import { Clock, CheckCircle2, ChevronRight, RefreshCw, AlertCircle, Coffee, Search } from "lucide-react"
 
 function formatTime(dateStr: string) {
   return new Date(dateStr).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
@@ -15,6 +15,7 @@ function getElapsedMinutes(dateStr: string) {
 export function KitchenClient({ initialData, branchId }: { initialData: any[], branchId?: number }) {
   const [orders, setOrders] = React.useState(initialData)
   const [filter, setFilter] = React.useState("ALL") // ALL, POS, APP
+  const [searchQuery, setSearchQuery] = React.useState("")
 
   // Refresh every 30 seconds
   React.useEffect(() => {
@@ -68,8 +69,12 @@ export function KitchenClient({ initialData, branchId }: { initialData: any[], b
     if (filter !== "ALL") {
       res = res.filter(o => o.order_source === filter)
     }
+    if (searchQuery.trim() !== "") {
+      const q = searchQuery.toLowerCase()
+      res = res.filter(o => o.invoice_code?.toLowerCase().includes(q))
+    }
     return res
-  }, [orders, filter])
+  }, [orders, filter, searchQuery])
 
   const newOrders = filteredOrders.filter(o => o.order_status === "PENDING" || o.order_status === "PAID")
   const inProgressOrders = filteredOrders.filter(o => o.order_status === "PROCESSING")
@@ -131,9 +136,23 @@ export function KitchenClient({ initialData, branchId }: { initialData: any[], b
           <h1 className="text-3xl font-extrabold text-foreground mb-1">Kitchen Display</h1>
           <p className="text-[13px] text-muted-foreground font-medium">Live tickets</p>
         </div>
-        <div className="flex items-center gap-2 px-3 py-1.5 bg-[#22c55e]/10 rounded-full border border-[#22c55e]/20">
-          <div className="w-2 h-2 rounded-full bg-[#22c55e] animate-pulse"></div>
-          <span className="text-[11px] font-bold text-[#22c55e] tracking-wider">LIVE</span>
+        
+        <div className="flex items-center gap-4">
+          <div className="relative w-[250px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
+            <input 
+              type="text" 
+              placeholder="Cari Invoice (contoh: INV-123)"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="w-full bg-card border border-border rounded-lg pl-10 pr-4 py-2 text-sm text-foreground focus:outline-none focus:border-brand-accent transition-colors"
+            />
+          </div>
+          
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-[#22c55e]/10 rounded-full border border-[#22c55e]/20">
+            <div className="w-2 h-2 rounded-full bg-[#22c55e] animate-pulse"></div>
+            <span className="text-[11px] font-bold text-[#22c55e] tracking-wider">LIVE</span>
+          </div>
         </div>
       </div>
 
