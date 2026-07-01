@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Plus, Pencil, Trash2, Check } from "lucide-react"
+import { Plus, Pencil, Trash2, Check, Filter } from "lucide-react"
 import { PageHeader } from "@/components/shared/page-header"
 import { DataTable } from "@/components/shared/data-table"
 import { Button } from "@/components/ui/button"
@@ -62,6 +62,11 @@ export function EmployeesClient({
 
   const [deleteModalOpen, setDeleteModalOpen] = React.useState(false)
   const [employeeToDelete, setEmployeeToDelete] = React.useState<any>(null)
+  const [showInactive, setShowInactive] = React.useState(false)
+
+  const filteredData = React.useMemo(() => {
+    return initialData.filter(emp => showInactive || emp.status === "ACTIVE")
+  }, [initialData, showInactive])
 
   const handleOpenAdd = () => {
     setEditId(null)
@@ -103,12 +108,7 @@ export function EmployeesClient({
         return <Badge variant={getRoleVariant(item.role)}>{formatRole(item.role)}</Badge>
       }
     },
-    {
-      header: "Login",
-      cell: (item: any) => (
-        item.has_login ? <Badge variant="success" className="bg-emerald-600">Yes</Badge> : <Badge variant="secondary">No</Badge>
-      )
-    },
+
     { header: "Rate/Hr", cell: (item: any) => formatMoney(item.rate) },
     {
       header: "Status",
@@ -216,15 +216,24 @@ export function EmployeesClient({
     <div>
       <PageHeader
         title="Employees"
-        description={`${initialData.length} staff`}
+        description={`${filteredData.length} staff`}
         action={
-          <Button onClick={handleOpenAdd} className="gap-2 bg-brand-blue hover:bg-brand-blue/90 text-white">
-            <Plus size={14} /> Add Employee
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              variant={showInactive ? "secondary" : "outline"} 
+              className="gap-2" 
+              onClick={() => setShowInactive(!showInactive)}
+            >
+              <Filter size={14} /> {showInactive ? "Hide Inactive" : "Show Inactive"}
+            </Button>
+            <Button onClick={handleOpenAdd} className="gap-2 bg-brand-blue hover:bg-brand-blue/90 text-white">
+              <Plus size={14} /> Add Employee
+            </Button>
+          </div>
         }
       />
 
-      <DataTable data={initialData} columns={columns} keyExtractor={item => item.id.toString()} />
+      <DataTable data={filteredData} columns={columns} keyExtractor={item => item.id.toString()} />
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogHeader>

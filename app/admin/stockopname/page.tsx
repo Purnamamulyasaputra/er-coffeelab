@@ -18,5 +18,5 @@ export default async function StockOpnamePage() {
     employees = employees.filter((e: any) => e.id === employeeId);
   }
   
-  return <StockOpnameClient initialData={opnames} employees={employees} branches={branches} currentBranchId={branchId} />
+  return <StockOpnameClient initialData={opnames} employees={employees} branches={branches} currentBranchId={branchId} role={role} />
 }

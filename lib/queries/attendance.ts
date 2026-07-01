@@ -8,11 +8,12 @@ export async function getAttendance(branchId?: number) {
         e.id as employee_id,
         e.name as emp, 
         b.name as branch, 
-        to_char(a.clock_in AT TIME ZONE 'Asia/Jakarta', 'DD/MM/YYYY') as date,
+        to_char(a.clock_in AT TIME ZONE 'Asia/Jakarta', 'DD-MM-YYYY') as date,
         to_char(a.clock_in AT TIME ZONE 'Asia/Jakarta', 'HH24:MI') as in,
         COALESCE(to_char(a.clock_out AT TIME ZONE 'Asia/Jakarta', 'HH24:MI'), '-') as out,
         COALESCE(
-          EXTRACT(HOUR FROM (a.clock_out - a.clock_in))::text || 'h', 
+          COALESCE(NULLIF(FLOOR(EXTRACT(EPOCH FROM (a.clock_out - a.clock_in)) / 3600)::text || 'h ', '0h '), '') || 
+          FLOOR((EXTRACT(EPOCH FROM (a.clock_out - a.clock_in))::integer % 3600) / 60)::text || 'm', 
           '-'
         ) as hours,
         COALESCE(
@@ -32,11 +33,12 @@ export async function getAttendance(branchId?: number) {
       e.id as employee_id,
       e.name as emp, 
       b.name as branch, 
-      to_char(a.clock_in AT TIME ZONE 'Asia/Jakarta', 'DD/MM/YYYY') as date,
+      to_char(a.clock_in AT TIME ZONE 'Asia/Jakarta', 'DD-MM-YYYY') as date,
       to_char(a.clock_in AT TIME ZONE 'Asia/Jakarta', 'HH24:MI') as in,
       COALESCE(to_char(a.clock_out AT TIME ZONE 'Asia/Jakarta', 'HH24:MI'), '-') as out,
       COALESCE(
-        EXTRACT(HOUR FROM (a.clock_out - a.clock_in))::text || 'h', 
+        COALESCE(NULLIF(FLOOR(EXTRACT(EPOCH FROM (a.clock_out - a.clock_in)) / 3600)::text || 'h ', '0h '), '') || 
+        FLOOR((EXTRACT(EPOCH FROM (a.clock_out - a.clock_in))::integer % 3600) / 60)::text || 'm', 
         '-'
       ) as hours,
       COALESCE(
@@ -69,4 +71,12 @@ export async function deleteAttendance(id: number) {
   return await sql`
     DELETE FROM employee_attendances WHERE id = ${id}
   `
+}
+
+export async function updateAttendance(id: number, clockInStr: string, clockOutStr: string | null) {
+  if (clockOutStr) {
+    return await sql`UPDATE employee_attendances SET clock_in = ${clockInStr}::timestamp, clock_out = ${clockOutStr}::timestamp WHERE id = ${id}`;
+  } else {
+    return await sql`UPDATE employee_attendances SET clock_in = ${clockInStr}::timestamp, clock_out = NULL WHERE id = ${id}`;
+  }
 }

@@ -17,7 +17,7 @@ function formatMoney(amount: number) {
   return "Rp " + Number(amount).toLocaleString("id-ID").replace(/,/g, '.')
 }
 
-export function RefundsClient({ initialData, role }: { initialData: any[], role?: string }) {
+export function RefundsClient({ initialData, eligibleOrders = [], role }: { initialData: any[], eligibleOrders?: any[], role?: string }) {
   const [open, setOpen] = React.useState(false)
   const [loading, setLoading] = React.useState(false)
   const { toast } = useToast()
@@ -28,6 +28,19 @@ export function RefundsClient({ initialData, role }: { initialData: any[], role?
   const [amount, setAmount] = React.useState("")
   const [reason, setReason] = React.useState("")
   const [method, setMethod] = React.useState("CASH")
+
+  // Auto-fill amount when FULL refund is selected
+  React.useEffect(() => {
+    if (orderId && type === "FULL") {
+      const order = eligibleOrders.find((o: any) => o.id.toString() === orderId)
+      if (order) setAmount(order.total_amount.toString())
+    }
+  }, [orderId, type, eligibleOrders])
+
+  const orderOptions = eligibleOrders.map((o: any) => ({
+    label: `${o.invoice_code} (Rp ${Number(o.total_amount).toLocaleString('id-ID')})`,
+    value: o.id.toString()
+  }))
 
   const columns = [
     { header: "No", cell: (_: unknown, index: number) => index + 1 },
@@ -113,8 +126,14 @@ export function RefundsClient({ initialData, role }: { initialData: any[], role?
         </DialogHeader>
         <div className="flex flex-col gap-3 py-2 overflow-y-auto px-1 max-h-[80vh]">
           <div className="flex flex-col gap-1.5">
-            <Label>Internal Order ID (Number)</Label>
-            <Input type="number" placeholder="Order ID" value={orderId} onChange={e => setOrderId(e.target.value)} />
+            <Label>Order Invoice</Label>
+            {orderOptions.length > 0 ? (
+              <Select searchable options={orderOptions} value={orderId} onChange={e => setOrderId(e.target.value)} />
+            ) : (
+              <div className="text-sm text-muted-foreground p-2 bg-muted rounded-md border border-border">
+                No eligible orders found for refund.
+              </div>
+            )}
           </div>
           <div className="flex flex-col gap-1.5">
             <Label>Type</Label>
@@ -126,7 +145,20 @@ export function RefundsClient({ initialData, role }: { initialData: any[], role?
           </div>
           <div className="flex flex-col gap-1.5">
             <Label>Amount</Label>
-            <Input type="number" placeholder="Amount" value={amount} onChange={e => setAmount(e.target.value)} />
+            <div className="relative">
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-[13px] font-bold">Rp</div>
+              <Input 
+                type="text" 
+                placeholder="0" 
+                className="pl-9"
+                value={amount === "0" || !amount ? "" : Number(amount).toLocaleString('id-ID')}
+                onChange={e => {
+                  const val = e.target.value.replace(/\D/g, '');
+                  setAmount(val);
+                }} 
+                disabled={type === "FULL"}
+              />
+            </div>
           </div>
           <div className="flex flex-col gap-1.5">
             <Label>Reason</Label>

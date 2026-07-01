@@ -57,8 +57,8 @@ export function DiscountsClient({ initialData, role }: { initialData: any[], rol
     { header: "Type", cell: (item: any) => item.type === "PERCENTAGE" ? "Percentage" : "Fixed Amount" },
     { header: "Value", cell: (item: any) => item.type === "PERCENTAGE" ? `${item.value}%` : `Rp ${Number(item.value).toLocaleString('id-ID')}` },
     { header: "Scope", cell: (item: any) => item.scope === "ORDER" ? "Order" : "Item" },
-    { 
-      header: "Status", 
+    {
+      header: "Status",
       cell: (item: any) => (
         <Badge variant={item.status === "ACTIVE" ? "success" : "destructive"}>
           {item.status === "ACTIVE" ? "Active" : "Inactive"}
@@ -96,11 +96,11 @@ export function DiscountsClient({ initialData, role }: { initialData: any[], rol
       })
 
       if (!res.ok) throw new Error(`Failed to ${editId ? 'update' : 'save'} discount`)
-      
+
       toast(`Discount ${editId ? 'updated' : 'saved'} successfully!`, "success")
       setOpen(false)
       router.refresh()
-      
+
       setName("")
       setValue("")
     } catch (e: any) {
@@ -131,16 +131,16 @@ export function DiscountsClient({ initialData, role }: { initialData: any[], rol
 
   return (
     <div>
-      <PageHeader 
-        title="Discounts" 
-        description="POS presets" 
+      <PageHeader
+        title="Discounts"
+        description="POS presets"
         action={
           role === "SUPERADMIN" ? (
             <Button onClick={handleOpenAdd} className="gap-2">
               <Plus size={14} /> Add
             </Button>
           ) : undefined
-        } 
+        }
       />
       <DataTable data={initialData} columns={columns} keyExtractor={item => item.id.toString()} />
 
@@ -156,8 +156,8 @@ export function DiscountsClient({ initialData, role }: { initialData: any[], rol
           <div className="flex flex-col gap-1.5">
             <Label>Type</Label>
             <Select options={[
-              {label: "Percentage", value: "PERCENTAGE"},
-              {label: "Fixed Amount", value: "FIXED"}
+              { label: "Percentage", value: "PERCENTAGE" },
+              { label: "Fixed Amount", value: "FIXED" }
             ]} value={type} onChange={e => setType(e.target.value)} />
           </div>
           <div className="flex flex-col gap-1.5">
@@ -167,8 +167,8 @@ export function DiscountsClient({ initialData, role }: { initialData: any[], rol
           <div className="flex flex-col gap-1.5">
             <Label>Scope</Label>
             <Select options={[
-              {label: "Order", value: "ORDER"},
-              {label: "Item", value: "ITEM"}
+              { label: "Order", value: "ORDER" },
+              { label: "Item", value: "ITEM" }
             ]} value={scope} onChange={e => setScope(e.target.value)} />
           </div>
           <div className="flex flex-col gap-4 mt-3 mb-2">
@@ -179,17 +179,17 @@ export function DiscountsClient({ initialData, role }: { initialData: any[], rol
           </div>
         </div>
         <DialogFooter className="mt-4">
-          <Button 
-            variant="secondary" 
-            onClick={() => setOpen(false)} 
-            disabled={loading} 
+          <Button
+            variant="secondary"
+            onClick={() => setOpen(false)}
+            disabled={loading}
             className="bg-slate-600 hover:bg-slate-700 text-white border-0 font-medium px-6"
           >
             Cancel
           </Button>
-          <Button 
-            className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-6 disabled:opacity-50 disabled:cursor-not-allowed" 
-            onClick={handleSave} 
+          <Button
+            className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-6 disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={handleSave}
             disabled={loading || !name || !value}
           >
             <Check size={16} /> {loading ? "Saving..." : "Save"}
@@ -202,7 +202,7 @@ export function DiscountsClient({ initialData, role }: { initialData: any[], rol
         onClose={() => setDeleteModalOpen(false)}
         onConfirm={confirmDelete}
         title="Delete Discount"
-        message={<>Are you sure you want to delete <span className="font-bold text-white">{discountToDelete?.name}</span>? This action cannot be undone.</>}
+        message={<>Are you sure you want to delete?</>}
         confirmText={loading ? "Deleting..." : "Delete"}
         type="danger"
       />

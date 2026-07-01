@@ -87,6 +87,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         userName={session?.name}
         userEmail={session?.email}
         dineinEnabled={session?.dineinEnabled}
+        hasActiveShift={session?.hasActiveShift}
       />
       
       <div className="flex-1 flex flex-col min-w-0 print:w-full print:m-0 print:p-0">

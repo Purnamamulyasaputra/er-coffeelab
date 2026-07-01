@@ -17,11 +17,11 @@ import { ConfirmationModal } from "@/components/ui/confirmation-modal"
 
 function generateVoucherCode(prefix = "ER") {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
-  const random = Array.from({length: 5}, () => chars[Math.floor(Math.random() * chars.length)]).join("")
+  const random = Array.from({ length: 5 }, () => chars[Math.floor(Math.random() * chars.length)]).join("")
   return `${prefix}-${random}`
 }
 
-export function VouchersClient({ initialData, role }: { initialData: any[], role?: string }) {
+export function VouchersClient({ initialData, campaigns, role }: { initialData: any[], campaigns?: any[], role?: string }) {
   const [open, setOpen] = React.useState(false)
   const [loading, setLoading] = React.useState(false)
   const { toast } = useToast()
@@ -37,6 +37,9 @@ export function VouchersClient({ initialData, role }: { initialData: any[], role
   const [startDate, setStartDate] = React.useState("")
   const [endDate, setEndDate] = React.useState("")
   const [isActive, setIsActive] = React.useState(true)
+  const [campaignId, setCampaignId] = React.useState("")
+
+  const campaignOptions = [{ label: "No Campaign (General)", value: "" }, ...(campaigns || []).map(c => ({ label: c.name, value: c.id.toString() }))]
 
   const [deleteModalOpen, setDeleteModalOpen] = React.useState(false)
   const [voucherToDelete, setVoucherToDelete] = React.useState<any>(null)
@@ -49,12 +52,13 @@ export function VouchersClient({ initialData, role }: { initialData: any[], role
     setMaxDiscount("")
     setMinTransaction("0")
     setUsageQuota("")
-    
+    setCampaignId("")
+
     // Default to today and 30 days from now
     const today = new Date()
     const nextMonth = new Date()
     nextMonth.setDate(today.getDate() + 30)
-    
+
     setStartDate(today.toISOString().split('T')[0])
     setEndDate(nextMonth.toISOString().split('T')[0])
     setIsActive(true)
@@ -69,11 +73,12 @@ export function VouchersClient({ initialData, role }: { initialData: any[], role
     setMaxDiscount(item.max_discount ? item.max_discount.toString() : "")
     setMinTransaction(item.min_transaction ? item.min_transaction.toString() : "0")
     setUsageQuota(item.usage_quota ? item.usage_quota.toString() : "")
-    
+    setCampaignId(item.campaign_id ? item.campaign_id.toString() : "")
+
     // Parse dates
     setStartDate(new Date(item.start_date || new Date()).toISOString().split('T')[0])
     setEndDate(new Date(item.end_date || new Date()).toISOString().split('T')[0])
-    
+
     setIsActive(item.status === "ACTIVE")
     setOpen(true)
   }
@@ -101,7 +106,8 @@ export function VouchersClient({ initialData, role }: { initialData: any[], role
           usage_quota: usageQuota ? Number(usageQuota) : null,
           start_date: new Date(startDate).toISOString(),
           end_date: new Date(endDate).toISOString(),
-          status: isActive ? 'ACTIVE' : 'INACTIVE'
+          status: isActive ? 'ACTIVE' : 'INACTIVE',
+          campaign_id: campaignId ? Number(campaignId) : null
         })
       })
 
@@ -109,7 +115,7 @@ export function VouchersClient({ initialData, role }: { initialData: any[], role
         const data = await res.json().catch(() => ({}))
         throw new Error(data.error || `Failed to ${editId ? 'update' : 'save'} voucher`)
       }
-      
+
       toast(`Voucher ${editId ? 'updated' : 'saved'} successfully!`, "success")
       setOpen(false)
       router.refresh()
@@ -142,18 +148,25 @@ export function VouchersClient({ initialData, role }: { initialData: any[], role
   const columns = [
     { header: "Code", accessorKey: "code" as const },
     { 
-      header: "Discount", 
+      header: "Campaign", 
+      cell: (item: any) => {
+        const camp = campaigns?.find(c => c.id == item.campaign_id)
+        return camp ? <Badge variant="outline" className="bg-slate-100">{camp.name}</Badge> : "-"
+      }
+    },
+    {
+      header: "Discount",
       cell: (item: any) => {
         if (item.discount_type === 'PERCENTAGE') {
           return `${item.discount_value}% ${item.max_discount ? `(Max Rp ${Number(item.max_discount).toLocaleString('id-ID')})` : ''}`
         }
         return `Rp ${Number(item.discount_value).toLocaleString('id-ID')}`
-      } 
+      }
     },
     { header: "Min Order", cell: (item: any) => "Rp " + Number(item.min_transaction).toLocaleString('id-ID') },
     { header: "Quota", cell: (item: any) => `${item.used_count}/${item.usage_quota || 'Unltd'}` },
-    { 
-      header: "Status", 
+    {
+      header: "Status",
       cell: (item: any) => (
         <Badge variant={item.status === "ACTIVE" ? "success" : "secondary"}>
           {item.status === "ACTIVE" ? "Active" : "Inactive"}
@@ -173,16 +186,16 @@ export function VouchersClient({ initialData, role }: { initialData: any[], role
 
   return (
     <div>
-      <PageHeader 
-        title="Vouchers" 
-        description="Promo codes for customers" 
+      <PageHeader
+        title="Vouchers"
+        description="Promo codes for customers"
         action={
           role === "SUPERADMIN" ? (
             <Button onClick={handleOpenAdd} className="gap-2">
               <Plus size={14} /> Add Voucher
             </Button>
           ) : undefined
-        } 
+        }
       />
       <DataTable data={initialData} columns={columns} keyExtractor={item => item.id.toString()} />
 
@@ -202,13 +215,18 @@ export function VouchersClient({ initialData, role }: { initialData: any[], role
               )}
             </div>
           </div>
-          
+
+          <div className="flex flex-col gap-1.5">
+            <Label>Campaign (Optional)</Label>
+            <Select options={campaignOptions} value={campaignId} onChange={e => setCampaignId(e.target.value)} />
+          </div>
+
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1.5">
               <Label>Type</Label>
               <Select options={[
-                {label: "Percentage", value: "PERCENTAGE"},
-                {label: "Fixed Amount", value: "FIXED"}
+                { label: "Percentage", value: "PERCENTAGE" },
+                { label: "Fixed Amount", value: "FIXED" }
               ]} value={type} onChange={e => setType(e.target.value)} />
             </div>
             <div className="flex flex-col gap-1.5">
@@ -250,17 +268,17 @@ export function VouchersClient({ initialData, role }: { initialData: any[], role
           </div>
         </div>
         <DialogFooter className="mt-4">
-          <Button 
-            variant="secondary" 
-            onClick={() => setOpen(false)} 
-            disabled={loading} 
+          <Button
+            variant="secondary"
+            onClick={() => setOpen(false)}
+            disabled={loading}
             className="bg-slate-600 hover:bg-slate-700 text-white border-0 font-medium px-6"
           >
             Cancel
           </Button>
-          <Button 
-            className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-6 disabled:opacity-50 disabled:cursor-not-allowed" 
-            onClick={handleSave} 
+          <Button
+            className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-6 disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={handleSave}
             disabled={loading || !code || !value || !startDate || !endDate}
           >
             <Check size={16} /> {loading ? "Saving..." : "Save"}
@@ -273,7 +291,7 @@ export function VouchersClient({ initialData, role }: { initialData: any[], role
         onClose={() => setDeleteModalOpen(false)}
         onConfirm={confirmDelete}
         title="Delete Voucher"
-        message={<>Are you sure you want to delete voucher <span className="font-bold text-white">{voucherToDelete?.code}</span>? This action cannot be undone.</>}
+        message="Are you sure you want to delete?"
         confirmText={loading ? "Deleting..." : "Delete"}
         type="danger"
       />

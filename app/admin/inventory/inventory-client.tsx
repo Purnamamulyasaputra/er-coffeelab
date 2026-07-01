@@ -75,8 +75,8 @@ export function InventoryClient({ initialData, role = "SUPERADMIN", branchId }: 
     { header: "Cost", cell: (item: any) => formatMoney(item.cost) },
     { header: "Stock", cell: (item: any) => formatNumber(item.stock) },
     { header: "Min", cell: (item: any) => formatNumber(item.min) },
-    { 
-      header: "Status", 
+    {
+      header: "Status",
       cell: (item: any) => {
         const status = getStockStatus(Number(item.stock), Number(item.min))
         return (
@@ -117,11 +117,11 @@ export function InventoryClient({ initialData, role = "SUPERADMIN", branchId }: 
       })
 
       if (!res.ok) throw new Error(`Failed to ${editId ? 'update' : 'save'} ingredient`)
-      
+
       toast(`Ingredient ${editId ? 'updated' : 'saved'} successfully!`, "success")
       setOpen(false)
       router.refresh()
-      
+
       setName("")
       setSku("")
     } catch (e: any) {
@@ -157,18 +157,18 @@ export function InventoryClient({ initialData, role = "SUPERADMIN", branchId }: 
 
   return (
     <div>
-      <PageHeader 
-        title="Ingredients" 
-        description={`${initialData.length} materials`} 
+      <PageHeader
+        title="Ingredients"
+        description={`${initialData.length} materials`}
         action={
           role === "SUPERADMIN" ? (
             <Button onClick={handleOpenAdd} className="gap-2">
               <Plus size={14} /> Add
             </Button>
           ) : null
-        } 
+        }
       />
-      
+
       {criticalItems.length > 0 && (
         <div className="mb-4 bg-destructive/10 border border-destructive/20 rounded-lg p-4 flex items-start gap-3">
           <div className="bg-destructive/20 p-2 rounded-full mt-0.5">
@@ -200,13 +200,13 @@ export function InventoryClient({ initialData, role = "SUPERADMIN", branchId }: 
           </div>
           <div className="flex flex-col gap-1.5">
             <Label>Unit</Label>
-            <Select 
+            <Select
               options={[
-                {label: "g", value: "g"},
-                {label: "ml", value: "ml"},
-                {label: "pcs", value: "pcs"}
-              ]} 
-              value={unit} onChange={e => setUnit(e.target.value)} 
+                { label: "g", value: "g" },
+                { label: "ml", value: "ml" },
+                { label: "pcs", value: "pcs" }
+              ]}
+              value={unit} onChange={e => setUnit(e.target.value)}
             />
           </div>
           <div className="flex flex-col gap-1.5">
@@ -219,31 +219,31 @@ export function InventoryClient({ initialData, role = "SUPERADMIN", branchId }: 
           </div>
           <div className="flex flex-col gap-1.5">
             <Label>Category</Label>
-            <Select 
+            <Select
               options={[
-                {label: "Coffee Bean", value: "COFFEE_BEAN"},
-                {label: "Syrup", value: "SYRUP"},
-                {label: "Milk", value: "MILK"},
-                {label: "Food", value: "FOOD"},
-                {label: "Packaging", value: "PACKAGING"},
-                {label: "Other", value: "OTHER"}
-              ]} 
-              value={category} onChange={e => setCategory(e.target.value)} 
+                { label: "Coffee Bean", value: "COFFEE_BEAN" },
+                { label: "Syrup", value: "SYRUP" },
+                { label: "Milk", value: "MILK" },
+                { label: "Food", value: "FOOD" },
+                { label: "Packaging", value: "PACKAGING" },
+                { label: "Other", value: "OTHER" }
+              ]}
+              value={category} onChange={e => setCategory(e.target.value)}
             />
           </div>
         </div>
         <DialogFooter className="mt-4">
-          <Button 
-            variant="secondary" 
-            onClick={() => setOpen(false)} 
-            disabled={loading} 
+          <Button
+            variant="secondary"
+            onClick={() => setOpen(false)}
+            disabled={loading}
             className="bg-slate-600 hover:bg-slate-700 text-white border-0 font-medium px-6"
           >
             Cancel
           </Button>
-          <Button 
-            className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-6 disabled:opacity-50 disabled:cursor-not-allowed" 
-            onClick={handleSave} 
+          <Button
+            className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-6 disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={handleSave}
             disabled={loading || !name || !sku}
           >
             <Check size={16} /> {loading ? "Saving..." : "Save"}
@@ -256,7 +256,7 @@ export function InventoryClient({ initialData, role = "SUPERADMIN", branchId }: 
         onClose={() => setDeleteModalOpen(false)}
         onConfirm={confirmDelete}
         title="Delete Ingredient"
-        message={`Are you sure you want to delete ${itemToDelete?.name}? This action cannot be undone.`}
+        message={`Are you sure you want to delete?`}
         confirmText={loading ? "Deleting..." : "Delete"}
         type="danger"
       />

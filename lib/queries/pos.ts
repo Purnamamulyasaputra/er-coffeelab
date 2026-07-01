@@ -14,6 +14,8 @@ export async function processPosCheckout(data: {
   tableSessionId?: number | null
   voucherId?: number | null
   employeeId?: number | null
+  adminId?: number | null
+  role?: string | null
   cashAmount?: number
   items: Array<{
     productId: number
@@ -60,9 +62,12 @@ export async function processPosCheckout(data: {
   const orderId = orderResult[0].id
 
   // 2. Log initial order status
+  let actorType = data.role === 'EMPLOYEE' ? 'EMPLOYEE' : (data.role ? data.role : null);
+  let actorId = data.role === 'EMPLOYEE' ? data.employeeId : data.adminId;
+
   await sql`
-    INSERT INTO order_status_logs (order_id, status, notes)
-    VALUES (${orderId}, 'PENDING', 'Order created from POS')
+    INSERT INTO order_status_logs (order_id, status, notes, actor_type, actor_id)
+    VALUES (${orderId}, 'PENDING', 'Order created from POS', ${actorType}, ${actorId || null})
   `
 
   // 3. Insert Order Items and Deduct Inventory

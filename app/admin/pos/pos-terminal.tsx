@@ -4,7 +4,7 @@ import * as React from "react"
 import { useRouter } from "next/navigation"
 import { Coffee, ShoppingCart, X, Circle, CreditCard, Loader2, Wifi, WifiOff, Check, Clock, Users, Monitor, Package, ClipboardList, UserCheck, RotateCcw, FileText, Ticket, Trash2, ChefHat, ShoppingBag, CheckCircle2, Lock, User, Printer } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
-import { Dialog, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { Dialog, DialogHeader, DialogTitle, DialogFooter, DialogContent } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Select } from "@/components/ui/select"
 import { jsPDF } from "jspdf"
@@ -1269,6 +1269,8 @@ export function POSTerminal({
           methodName={xenditData?.methodName || "E-Wallet"}
           channelCode={xenditData?.channelCode || ""}
           logoUrl={xenditData?.logoUrl}
+          customerPhone={customerPhone}
+          onCustomerPhoneChange={(phone) => setCustomerPhone(phone)}
           onSuccess={async () => {
           setXenditModalType(null)
           
@@ -1390,43 +1392,45 @@ export function POSTerminal({
         <Dialog open={!!lastTransaction} onOpenChange={(open) => {
           if (!open) setLastTransaction(null)
         }}>
-          <DialogHeader>
-          <DialogTitle className="text-center text-xl text-primary flex flex-col items-center gap-2 mt-4">
-            <CheckCircle2 size={48} className="text-primary" />
-            Pembayaran Berhasil!
-          </DialogTitle>
-        </DialogHeader>
-        {lastTransaction?.paymentMethod === 'CASH' && (
-          <div className="flex flex-col items-center justify-center py-6">
-            <p className="text-sm text-muted-foreground mb-1">Kembalian (Change)</p>
-            <p className="text-4xl font-black text-foreground">
-              {formatMoney(Math.max(0, lastTransaction.cashAmount - lastTransaction.totalAmount))}
-            </p>
-          </div>
-        )}
+          <DialogContent className="sm:max-w-md bg-card border-border">
+            <DialogHeader>
+              <DialogTitle className="text-center text-xl text-primary flex flex-col items-center gap-2 mt-4">
+                <CheckCircle2 size={48} className="text-primary" />
+                Pembayaran Berhasil!
+              </DialogTitle>
+            </DialogHeader>
+            {lastTransaction?.paymentMethod === 'CASH' && (
+              <div className="flex flex-col items-center justify-center py-6">
+                <p className="text-sm text-muted-foreground mb-1">Kembalian (Change)</p>
+                <p className="text-4xl font-black text-foreground">
+                  {formatMoney(Math.max(0, lastTransaction.cashAmount - lastTransaction.totalAmount))}
+                </p>
+              </div>
+            )}
 
-        <DialogFooter className="flex-col sm:flex-row gap-2 mt-4">
-            <Button
-              variant="outline"
-              className="w-full gap-2"
-              onClick={handleDownloadPDF}
-            >
-              <FileText size={16} /> Download PDF
-            </Button>
-            <Button
-              variant="outline"
-              className="w-full gap-2"
-              onClick={() => window.print()}
-            >
-              <Printer size={16} /> Print Receipt
-            </Button>
-            <Button
-              className="w-full gap-2"
-              onClick={() => setLastTransaction(null)}
-            >
-              <Check size={16} /> Selesai
-            </Button>
-          </DialogFooter>
+            <DialogFooter className="flex-col sm:flex-row gap-2 mt-4">
+              <Button
+                variant="outline"
+                className="w-full gap-2"
+                onClick={handleDownloadPDF}
+              >
+                <FileText size={16} /> Download PDF
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full gap-2"
+                onClick={() => window.print()}
+              >
+                <Printer size={16} /> Print Receipt
+              </Button>
+              <Button
+                className="w-full gap-2"
+                onClick={() => setLastTransaction(null)}
+              >
+                <Check size={16} /> Selesai
+              </Button>
+            </DialogFooter>
+          </DialogContent>
         </Dialog>
       </div>
 

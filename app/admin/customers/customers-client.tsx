@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Download, Eye, X, Mail, Phone, MapPin, Calendar, CreditCard, ChevronRight, Filter } from "lucide-react"
+import { Download, Eye, X, Mail, Phone, MapPin, Calendar, CreditCard, ChevronRight, Filter, Loader2 } from "lucide-react"
 import { PageHeader } from "@/components/shared/page-header"
 import { DataTable } from "@/components/shared/data-table"
 import { Button } from "@/components/ui/button"
@@ -23,11 +23,12 @@ export function CustomersClient({ initialData }: { initialData: any[] }) {
   const [data, setData] = React.useState(initialData)
   const [selectedCustomer, setSelectedCustomer] = React.useState<any | null>(null)
   const [customerDetail, setCustomerDetail] = React.useState<any | null>(null)
-  const [loadingDetail, setLoadingDetail] = React.useState(false)
+  const [loadingDetailId, setLoadingDetailId] = React.useState<number | null>(null)
 
   // Filters
   const [tierFilter, setTierFilter] = React.useState<string>("ALL")
   const [showFilters, setShowFilters] = React.useState(false)
+  const [drawerTab, setDrawerTab] = React.useState<"overview" | "orders" | "favorites" | "vouchers">("overview")
 
   const handleExportCSV = () => {
     const headers = ["ID", "Name", "Phone", "Email", "Tier", "Points", "Lifetime Spend", "Last Visit"]
@@ -52,19 +53,19 @@ export function CustomersClient({ initialData }: { initialData: any[] }) {
   }
 
   const handleOpenDetail = async (customer: any) => {
-    setSelectedCustomer(customer)
-    setCustomerDetail(null)
-    setLoadingDetail(true)
+    setLoadingDetailId(customer.id)
     try {
       const res = await fetch(`/api/customers/${customer.id}`)
       if (res.ok) {
         const result = await res.json()
         setCustomerDetail(result.data)
+        setSelectedCustomer(customer)
+        setDrawerTab("overview")
       }
     } catch (e) {
       console.error(e)
     } finally {
-      setLoadingDetail(false)
+      setLoadingDetailId(null)
     }
   }
 
@@ -91,7 +92,9 @@ export function CustomersClient({ initialData }: { initialData: any[] }) {
     {
       header: "Actions",
       cell: (item: any) => (
-        <Button size="icon" onClick={() => handleOpenDetail(item)} className="h-[34px] w-[34px] bg-[#2a2d4a] hover:bg-[#2a2d4a]/90 text-white rounded-[10px]"><Eye size={14} /></Button>
+        <Button size="icon" disabled={loadingDetailId === item.id} onClick={() => handleOpenDetail(item)} className="h-[34px] w-[34px] bg-[#2a2d4a] hover:bg-[#2a2d4a]/90 text-white rounded-[10px]">
+          {loadingDetailId === item.id ? <Loader2 size={14} className="animate-spin" /> : <Eye size={14} />}
+        </Button>
       )
     }
   ]
@@ -148,11 +151,7 @@ export function CustomersClient({ initialData }: { initialData: any[] }) {
 
             {/* Drawer Content */}
             <div className="flex-1 overflow-y-auto p-6 scrollbar-thin">
-              {loadingDetail ? (
-                <div className="flex items-center justify-center h-full">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-blue"></div>
-                </div>
-              ) : customerDetail ? (
+              {customerDetail ? (
                 <div className="space-y-6">
                   {/* Profile Card */}
                   <div className="bg-muted rounded-xl p-5 border border-border">
@@ -193,54 +192,118 @@ export function CustomersClient({ initialData }: { initialData: any[] }) {
                     </div>
                   </div>
 
-                  {/* Order History */}
-                  <div>
-                    <h4 className="text-[14px] font-bold text-foreground mb-3">Recent Orders</h4>
-                    {customerDetail.orders.length === 0 ? (
-                      <div className="text-[13px] text-muted-foreground p-4 text-center bg-muted rounded-xl border border-border">No orders found</div>
-                    ) : (
-                      <div className="space-y-2">
-                        {customerDetail.orders.map((order: any) => (
-                          <div key={order.id} className="bg-muted rounded-xl p-3 border border-border flex items-center justify-between group cursor-pointer hover:border-brand-blue transition-colors">
-                            <div>
-                              <div className="flex items-center gap-2 mb-1">
-                                <span className="text-[12px] font-bold text-foreground">{order.invoice_code}</span>
-                                <span className="text-[9px] px-1.5 py-0.5 rounded bg-card text-muted-foreground">{order.branch_name || 'Online'}</span>
-                              </div>
-                              <div className="text-[11px] text-muted-foreground">
-                                {new Date(order.created_at).toLocaleDateString('id-ID')} • {formatMoney(order.total_amount)}
-                              </div>
-                            </div>
-                            <ChevronRight size={16} className="text-muted-foreground group-hover:text-foreground transition-colors" />
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                  {/* Drawer Tabs */}
+                  <div className="flex gap-1 bg-muted p-1 rounded-lg w-full mb-4">
+                    {["overview", "orders", "favorites", "vouchers"].map(t => (
+                      <button
+                        key={t}
+                        onClick={() => setDrawerTab(t as any)}
+                        className={`flex-1 text-center py-1.5 text-[11px] font-bold rounded-md capitalize transition-colors ${drawerTab === t ? 'bg-white text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+                      >
+                        {t}
+                      </button>
+                    ))}
                   </div>
 
-                  {/* Addresses */}
-                  <div>
-                    <h4 className="text-[14px] font-bold text-foreground mb-3">Saved Addresses</h4>
-                    {customerDetail.addresses.length === 0 ? (
-                      <div className="text-[13px] text-muted-foreground p-4 text-center bg-muted rounded-xl border border-border">No addresses saved</div>
-                    ) : (
-                      <div className="space-y-2">
-                        {customerDetail.addresses.map((addr: any) => (
-                          <div key={addr.id} className="bg-muted rounded-xl p-3 border border-border">
-                            <div className="flex items-center gap-2 mb-1">
-                              <MapPin size={12} className="text-brand-blue" />
-                              <span className="text-[12px] font-bold text-foreground">{addr.label}</span>
-                              {addr.is_primary && <span className="text-[9px] bg-brand-blue/20 text-brand-blue px-1.5 py-0.5 rounded">PRIMARY</span>}
+                  {drawerTab === 'overview' && (
+                    <div>
+                      <h4 className="text-[14px] font-bold text-foreground mb-3">Saved Addresses</h4>
+                      {customerDetail.addresses.length === 0 ? (
+                        <div className="text-[13px] text-muted-foreground p-4 text-center bg-muted rounded-xl border border-border">No addresses saved</div>
+                      ) : (
+                        <div className="space-y-2">
+                          {customerDetail.addresses.map((addr: any) => (
+                            <div key={addr.id} className="bg-muted rounded-xl p-3 border border-border">
+                              <div className="flex items-center gap-2 mb-1">
+                                <MapPin size={12} className="text-brand-blue" />
+                                <span className="text-[12px] font-bold text-foreground">{addr.label}</span>
+                                {addr.is_default && <span className="text-[9px] bg-brand-blue/20 text-brand-blue px-1.5 py-0.5 rounded">PRIMARY</span>}
+                              </div>
+                              <div className="text-[11px] text-muted-foreground pl-5 leading-relaxed">
+                                {addr.address}<br/>
+                                {addr.notes && <span className="italic">Note: {addr.notes}</span>}
+                              </div>
                             </div>
-                            <div className="text-[11px] text-muted-foreground pl-5 leading-relaxed">
-                              {addr.recipient_name} ({addr.phone_number})<br/>
-                              {addr.address_line1}, {addr.city}
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {drawerTab === 'orders' && (
+                    <div>
+                      <h4 className="text-[14px] font-bold text-foreground mb-3">Recent Orders</h4>
+                      {customerDetail.orders.length === 0 ? (
+                        <div className="text-[13px] text-muted-foreground p-4 text-center bg-muted rounded-xl border border-border">No orders found</div>
+                      ) : (
+                        <div className="space-y-2">
+                          {customerDetail.orders.map((order: any) => (
+                            <div key={order.id} className="bg-muted rounded-xl p-3 border border-border flex items-center justify-between group cursor-pointer hover:border-brand-blue transition-colors">
+                              <div>
+                                <div className="flex items-center gap-2 mb-1">
+                                  <span className="text-[12px] font-bold text-foreground">{order.invoice_code}</span>
+                                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-card text-muted-foreground">{order.branch_name || 'Online'}</span>
+                                </div>
+                                <div className="text-[11px] text-muted-foreground">
+                                  {new Date(order.created_at).toLocaleDateString('id-ID')} • {formatMoney(order.total_amount)}
+                                </div>
+                              </div>
+                              <ChevronRight size={16} className="text-muted-foreground group-hover:text-foreground transition-colors" />
                             </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {drawerTab === 'favorites' && (
+                    <div>
+                      <h4 className="text-[14px] font-bold text-foreground mb-3">Favorite Products</h4>
+                      {!customerDetail.behaviors?.favorites || customerDetail.behaviors.favorites.length === 0 ? (
+                        <div className="text-[13px] text-muted-foreground p-4 text-center bg-muted rounded-xl border border-border">No favorite products</div>
+                      ) : (
+                        <div className="grid grid-cols-2 gap-2">
+                          {customerDetail.behaviors.favorites.map((fav: any) => (
+                            <div key={fav.id} className="bg-muted rounded-xl p-2 border border-border flex items-center gap-2">
+                              {fav.image_url ? (
+                                <img src={`/api/image?url=${encodeURIComponent(fav.image_url)}`} alt={fav.name} className="w-10 h-10 rounded-md object-cover flex-shrink-0" />
+                              ) : (
+                                <div className="w-10 h-10 rounded-md bg-card flex-shrink-0"></div>
+                              )}
+                              <div className="min-w-0">
+                                <div className="text-[12px] font-bold text-foreground truncate">{fav.name}</div>
+                                <div className="text-[11px] text-muted-foreground">{formatMoney(fav.base_price)}</div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {drawerTab === 'vouchers' && (
+                    <div>
+                      <h4 className="text-[14px] font-bold text-foreground mb-3">Voucher Usage</h4>
+                      {!customerDetail.behaviors?.vouchers || customerDetail.behaviors.vouchers.length === 0 ? (
+                        <div className="text-[13px] text-muted-foreground p-4 text-center bg-muted rounded-xl border border-border">No vouchers used</div>
+                      ) : (
+                        <div className="space-y-2">
+                          {customerDetail.behaviors.vouchers.map((v: any, i: number) => (
+                            <div key={i} className="bg-muted rounded-xl p-3 border border-border">
+                              <div className="flex items-center justify-between mb-1">
+                                <span className="text-[12px] font-bold text-foreground">{v.code}</span>
+                                <Badge variant="success" className="text-[9px]">{v.discount_type}</Badge>
+                              </div>
+                              <div className="text-[11px] text-muted-foreground flex justify-between">
+                                <span>{new Date(v.created_at).toLocaleDateString('id-ID')}</span>
+                                <span className="font-bold text-emerald-600">- {formatMoney(v.discount_applied)}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                 </div>
               ) : null}

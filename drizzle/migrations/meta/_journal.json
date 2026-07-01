@@ -43,6 +43,13 @@
       "when": 1782444592378,
       "tag": "0005_flowery_prowler",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1782890177150,
+      "tag": "0006_purple_miek",
+      "breakpoints": true
     }
   ]
 }

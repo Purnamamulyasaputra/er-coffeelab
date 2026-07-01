@@ -166,19 +166,19 @@ export function NotificationsClient({ initialData }: { initialData: any[] }) {
 
       {activeTab === "BROADCAST" && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-card border border-border rounded-xl p-6">
-            <h3 className="text-foreground font-bold mb-4 flex items-center gap-2"><MessageSquare size={16} className="text-brand-blue"/> Compose Message</h3>
-            <form onSubmit={handleSendBroadcast} className="space-y-4">
+          <div className="bg-card border border-border rounded-xl p-5">
+            <h3 className="text-foreground font-bold mb-3 flex items-center gap-2 text-[14px]"><MessageSquare size={14} className="text-brand-blue"/> Compose Message</h3>
+            <form onSubmit={handleSendBroadcast} className="space-y-3">
               <div>
-                <label className="block text-[12px] font-medium text-muted-foreground mb-1.5">Target Audience</label>
-                <select value={bcAudience} onChange={e => setBcAudience(e.target.value)} className="w-full bg-muted border border-border rounded-lg px-3.5 py-2.5 text-foreground text-[13px] outline-none focus:border-brand-blue transition-colors">
+                <label className="block text-[11px] font-medium text-muted-foreground mb-1">Target Audience</label>
+                <select value={bcAudience} onChange={e => setBcAudience(e.target.value)} className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-foreground text-[12px] h-9 outline-none focus:border-brand-blue transition-colors">
                   <option value="ALL">All Customers</option>
                   <option value="PLATINUM">Platinum Members Only</option>
                   <option value="INACTIVE_30">Inactive for 30+ Days</option>
                 </select>
               </div>
               <div>
-                <label className="block text-[12px] font-medium text-muted-foreground mb-1.5">Load from Template (Optional)</label>
+                <label className="block text-[11px] font-medium text-muted-foreground mb-1">Load from Template (Optional)</label>
                 <select 
                   onChange={e => {
                     const val = e.target.value;
@@ -193,8 +193,8 @@ export function NotificationsClient({ initialData }: { initialData: any[] }) {
                       setBcBody(t.body_template || "")
                     }
                   }} 
-                  className="w-full bg-muted border border-border rounded-lg px-3.5 py-2.5 text-foreground text-[13px] outline-none focus:border-brand-blue transition-colors appearance-none"
-                  style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'14\' height=\'14\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%238b8fa8\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3E%3Cpath d=\'m6 9 6 6 6-6\'/%3E%3C/svg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 12px center' }}
+                  className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-foreground text-[12px] h-9 outline-none focus:border-brand-blue transition-colors appearance-none"
+                  style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'14\' height=\'14\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%238b8fa8\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3E%3Cpath d=\'m6 9 6 6 6-6\'/%3E%3C/svg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center' }}
                 >
                   <option value="">-- Custom Message --</option>
                   {data.filter((d: any) => d.active).map((t: any) => (
@@ -203,34 +203,33 @@ export function NotificationsClient({ initialData }: { initialData: any[] }) {
                 </select>
               </div>
               <div>
-                <label className="block text-[12px] font-medium text-muted-foreground mb-1.5">Notification Title</label>
-                <input required value={bcTitle} onChange={e => setBcTitle(e.target.value)} className="w-full bg-muted border border-border rounded-lg px-3.5 py-2.5 text-foreground text-[13px] outline-none focus:border-brand-blue transition-colors placeholder:text-muted-foreground/50" placeholder="e.g. Flash Sale Alert!" />
+                <label className="block text-[11px] font-medium text-muted-foreground mb-1">Notification Title</label>
+                <input required value={bcTitle} onChange={e => setBcTitle(e.target.value)} className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-foreground text-[12px] h-9 outline-none focus:border-brand-blue transition-colors placeholder:text-muted-foreground/50" placeholder="e.g. Flash Sale Alert!" />
               </div>
               <div>
-                <label className="block text-[12px] font-medium text-muted-foreground mb-1.5">Message Body</label>
-                <textarea required rows={4} value={bcBody} onChange={e => setBcBody(e.target.value)} className="w-full bg-muted border border-border rounded-lg px-3.5 py-2.5 text-foreground text-[13px] outline-none focus:border-brand-blue transition-colors resize-none placeholder:text-muted-foreground/50" placeholder="Enter the main text of your push notification..." />
+                <label className="block text-[11px] font-medium text-muted-foreground mb-1">Message Body</label>
+                <textarea required rows={3} value={bcBody} onChange={e => setBcBody(e.target.value)} className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-foreground text-[12px] outline-none focus:border-brand-blue transition-colors resize-none placeholder:text-muted-foreground/50" placeholder="Enter the main text of your push notification..." />
               </div>
-              <Button type="submit" disabled={bcSending} className="w-full bg-brand-blue hover:bg-brand-blue/80 text-white font-bold mt-2 h-11">
-                {bcSending ? "Sending..." : <><Send size={16} className="mr-2" /> Send Broadcast Now</>}
+              <Button type="submit" disabled={bcSending} className="w-full bg-brand-blue hover:bg-brand-blue/80 text-white text-[13px] font-bold mt-1 h-10">
+                {bcSending ? "Sending..." : <><Send size={14} className="mr-2" /> Send Broadcast Now</>}
               </Button>
             </form>
           </div>
 
-          {/* Device Preview (keep as phone-look which is dark) */}
           <div className="flex flex-col items-center justify-center">
-            <div className="w-[240px] h-[480px] bg-black rounded-[32px] border-[6px] border-[#1c1f3a] relative overflow-hidden shadow-2xl flex flex-col justify-center items-center p-3">
-              <div className="absolute top-0 w-[100px] h-5 bg-[#1c1f3a] rounded-b-xl"></div>
+            <div className="w-[180px] h-[360px] bg-black rounded-[24px] border-[5px] border-[#1c1f3a] relative overflow-hidden shadow-2xl flex flex-col justify-center items-center p-2">
+              <div className="absolute top-0 w-[80px] h-4 bg-[#1c1f3a] rounded-b-lg"></div>
               
-              <div className="w-full bg-[#1a1c29]/90 backdrop-blur-md rounded-2xl p-3.5 shadow-lg border border-white/10 mt-auto mb-[100px] transform transition-all">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-4 h-4 rounded bg-brand-blue flex items-center justify-center text-[9px] font-bold text-white">ER</div>
-                  <span className="text-[10px] text-white/60 font-medium">ER Coffeelab • now</span>
+              <div className="w-full bg-[#1a1c29]/90 backdrop-blur-md rounded-xl p-2.5 shadow-lg border border-white/10 mt-auto mb-[60px] transform transition-all">
+                <div className="flex items-center gap-1.5 mb-1.5">
+                  <div className="w-3.5 h-3.5 rounded bg-brand-blue flex items-center justify-center text-[7px] font-bold text-white">ER</div>
+                  <span className="text-[8px] text-white/60 font-medium">ER Coffeelab • now</span>
                 </div>
-                <h4 className="text-white font-bold text-[13px] leading-tight mb-1">{bcTitle || "Notification Title"}</h4>
-                <p className="text-white/80 text-[12px] leading-tight line-clamp-3">{bcBody || "This is how your message body will appear on the customer's lock screen."}</p>
+                <h4 className="text-white font-bold text-[11px] leading-tight mb-0.5">{bcTitle || "Notification Title"}</h4>
+                <p className="text-white/80 text-[10px] leading-tight line-clamp-3">{bcBody || "This is how your message body will appear on the customer's lock screen."}</p>
               </div>
               
-              <div className="absolute bottom-2 w-[80px] h-1 bg-white/20 rounded-full"></div>
+              <div className="absolute bottom-1.5 w-[60px] h-[3px] bg-white/20 rounded-full"></div>
             </div>
             <p className="text-muted-foreground text-[12px] mt-4 font-medium">Lock Screen Preview</p>
           </div>

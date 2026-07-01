@@ -11,7 +11,10 @@ export async function getVouchers() {
       min_transaction,
       usage_quota,
       used_count,
-      status
+      status,
+      campaign_id,
+      start_date,
+      end_date
     FROM vouchers
     ORDER BY created_at DESC
   `
@@ -38,6 +41,7 @@ export async function getActiveVouchers() {
 }
 
 export async function createVoucher(data: {
+  campaign_id: number | null
   code: string
   discount_type: string
   discount_value: number
@@ -50,10 +54,10 @@ export async function createVoucher(data: {
 }) {
   return await sql`
     INSERT INTO vouchers (
-      code, discount_type, discount_value, max_discount, min_transaction,
+      campaign_id, code, discount_type, discount_value, max_discount, min_transaction,
       usage_quota, start_date, end_date, status
     ) VALUES (
-      ${data.code}, ${data.discount_type}, ${data.discount_value}, ${data.max_discount}, ${data.min_transaction},
+      ${data.campaign_id}, ${data.code}, ${data.discount_type}, ${data.discount_value}, ${data.max_discount}, ${data.min_transaction},
       ${data.usage_quota}, ${data.start_date}, ${data.end_date}, ${data.status}
     )
     RETURNING id
@@ -61,6 +65,7 @@ export async function createVoucher(data: {
 }
 
 export async function updateVoucher(id: number, data: {
+  campaign_id: number | null
   code: string
   discount_type: string
   discount_value: number
@@ -74,6 +79,7 @@ export async function updateVoucher(id: number, data: {
   return await sql`
     UPDATE vouchers
     SET
+      campaign_id = ${data.campaign_id},
       code = ${data.code},
       discount_type = ${data.discount_type},
       discount_value = ${data.discount_value},

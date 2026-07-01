@@ -15,15 +15,15 @@ import { Badge } from "@/components/ui/badge"
 import { ConfirmationModal } from "@/components/ui/confirmation-modal"
 import { useRouter } from "next/navigation"
 
-export function StockClient({ 
-  initialData, 
-  products = [], 
+export function StockClient({
+  initialData,
+  products = [],
   branches = [],
   currentBranchId,
   role
-}: { 
-  initialData: any[], 
-  products?: any[], 
+}: {
+  initialData: any[],
+  products?: any[],
   branches?: any[],
   currentBranchId?: number,
   role?: string
@@ -43,7 +43,7 @@ export function StockClient({
   const [newStockStatus, setNewStockStatus] = React.useState("AVAILABLE")
 
   const selectedBranchName = branches.find(b => b.id.toString() === selectedBranchId)?.name;
-  
+
   const availableProducts = React.useMemo(() => {
     return products.filter(p => {
       return !initialData.some(stock => stock.product === p.name && stock.branch === selectedBranchName);
@@ -71,7 +71,7 @@ export function StockClient({
       })
 
       if (!res.ok) throw new Error("Failed to update stock")
-      
+
       toast(`Stock updated to ${isAvailable ? "Available" : "Out of Stock"}`, "success")
       router.refresh()
     } catch (err: any) {
@@ -90,7 +90,7 @@ export function StockClient({
       })
 
       if (!res.ok) throw new Error("Failed to update stock")
-      
+
       toast("Stock updated successfully", "success")
       setOpen(false)
       router.refresh()
@@ -132,7 +132,7 @@ export function StockClient({
 
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || "Failed to add stock")
-      
+
       toast("Stock added successfully", "success")
       setAddModalOpen(false)
       router.refresh()
@@ -147,15 +147,15 @@ export function StockClient({
     { header: "No", cell: (_: any, index: number) => index + 1 },
     { header: "Product", accessorKey: "product" as const },
     { header: "Branch", accessorKey: "branch" as const },
-    { 
-      header: "Stock Status", 
+    {
+      header: "Stock Status",
       cell: (item: any) => (
         <div className="flex items-center gap-2">
-          <Switch 
-            id={`stock-${item.id}`} 
-            checked={item.status === "AVAILABLE"} 
+          <Switch
+            id={`stock-${item.id}`}
+            checked={item.status === "AVAILABLE"}
             disabled={role === "EMPLOYEE"}
-            onChange={(e: any) => handleToggleStatus(item, e.target.checked)} 
+            onChange={(e: any) => handleToggleStatus(item, e.target.checked)}
           />
           <Label htmlFor={`stock-${item.id}`} className={`text-[12px] ${item.status === "AVAILABLE" ? "text-success font-bold" : "text-destructive font-bold"}`}>
             {item.status === "AVAILABLE" ? "Available" : "Out of Stock"}
@@ -175,15 +175,15 @@ export function StockClient({
     }] : [])
   ];
 
-  const columns = currentBranchId 
-    ? baseColumns.filter(col => col.header !== "Branch") 
+  const columns = currentBranchId
+    ? baseColumns.filter(col => col.header !== "Branch")
     : baseColumns;
 
   return (
     <div>
-      <PageHeader 
-        title="Stock Availability" 
-        description="Per-branch availability" 
+      <PageHeader
+        title="Stock Availability"
+        description="Per-branch availability"
         action={
           role === "SUPERADMIN" ? (
             <Button onClick={() => setAddModalOpen(true)} className="gap-2">
@@ -201,7 +201,7 @@ export function StockClient({
         onClose={() => setDeleteModalOpen(false)}
         type="danger"
         title="Delete Stock"
-        message="Are you sure you want to delete this stock entry? This action cannot be undone."
+        message={<>Are you sure you want to delete this stock entry?</>}
         onConfirm={handleDelete}
         confirmText={loading ? "Deleting..." : "Delete"}
       />
@@ -228,28 +228,28 @@ export function StockClient({
           </div>
           <div className="flex flex-col gap-1.5 mt-2">
             <Label>Stock Status</Label>
-            <Select 
+            <Select
               options={[
                 { label: "Available", value: "AVAILABLE" },
                 { label: "Out of Stock", value: "OUT_OF_STOCK" }
-              ]} 
-              value={newStockStatus} 
-              onChange={e => setNewStockStatus(e.target.value)} 
+              ]}
+              value={newStockStatus}
+              onChange={e => setNewStockStatus(e.target.value)}
             />
           </div>
         </div>
         <DialogFooter className="mt-4">
-          <Button 
-            variant="secondary" 
-            onClick={() => setAddModalOpen(false)} 
-            disabled={loading} 
+          <Button
+            variant="secondary"
+            onClick={() => setAddModalOpen(false)}
+            disabled={loading}
             className="bg-slate-600 hover:bg-slate-700 text-white border-0 font-medium px-6"
           >
             Cancel
           </Button>
-          <Button 
-            className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-6 disabled:opacity-50 disabled:cursor-not-allowed" 
-            onClick={handleAddSave} 
+          <Button
+            className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-6 disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={handleAddSave}
             disabled={loading || !selectedBranchId || !selectedProductId}
           >
             <Check size={16} /> {loading ? "Saving..." : "Save"}

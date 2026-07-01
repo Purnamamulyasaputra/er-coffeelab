@@ -3,6 +3,11 @@ import { sql } from "@/lib/db"
 import { getSession } from "@/lib/auth"
 import { createPaymentRequest, logPayment } from "@/lib/xendit"
 
+function normalizeEwalletCode(code: string): string {
+  if (!code) return code
+  return code.toUpperCase().replace(/^ID_/, '')
+}
+
 export async function POST(request: NextRequest) {
   try {
     const session = await getSession("pos") || await getSession("admin")
@@ -20,6 +25,7 @@ export async function POST(request: NextRequest) {
     let payload: any = {
       amount: Number(amount),
       currency: "IDR",
+      country: "ID",
       reference_id: invoiceCode,
     }
 
@@ -31,21 +37,35 @@ export async function POST(request: NextRequest) {
       }
       payload.description = `Order ${invoiceCode} - ER Coffeelab`
     } else if (methodType === "EWALLET" || methodType === "E_WALLET") {
-      payload.country = "ID"
+      const normalizedCode = normalizeEwalletCode(channelCode)
+      const rawCode = channelCode.toUpperCase()
+      
       payload.payment_method = {
         type: "EWALLET",
         reusability: "ONE_TIME_USE",
         ewallet: {
-          channel_code: channelCode,
-          channel_properties: {
-            success_return_url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/admin/pos?status=SUCCEEDED`,
-            failure_return_url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/admin/pos?status=FAILED`,
-            cancel_return_url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/admin/pos?status=CANCELLED`
-          }
+          channel_code: normalizedCode,
+          channel_properties: {} as any
         }
       }
-      if (channelCode === 'OVO' || channelCode === 'DANA') {
-        payload.payment_method.ewallet.channel_properties.mobile_number = customerPhone || "+628123456789"
+
+      // OVO uses Push Notification, requires mobile_number, NO return URLs
+      if (rawCode === 'OVO' || rawCode === 'ID_OVO') {
+        let phone = customerPhone
+        if (!phone) {
+          return NextResponse.json({ error: `Nomor HP pelanggan wajib diisi untuk pembayaran via OVO` }, { status: 400 })
+        }
+        if (phone.startsWith('0')) {
+          phone = '+62' + phone.substring(1)
+        } else if (!phone.startsWith('+')) {
+          phone = '+' + phone
+        }
+        payload.payment_method.ewallet.channel_properties.mobile_number = phone
+      } else {
+        // DANA, SHOPEEPAY, LINKAJA, etc use Redirection, require return URLs
+        payload.payment_method.ewallet.channel_properties.success_return_url = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/admin/pos?status=SUCCEEDED`
+        payload.payment_method.ewallet.channel_properties.failure_return_url = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/admin/pos?status=FAILED`
+        payload.payment_method.ewallet.channel_properties.cancel_return_url = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/admin/pos?status=CANCELLED`
       }
     } else if (methodType === "VIRTUAL_ACCOUNT") {
       payload.payment_method = {

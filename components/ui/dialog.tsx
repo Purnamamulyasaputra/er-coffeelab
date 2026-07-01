@@ -16,7 +16,7 @@ export function Dialog({ open, onOpenChange, children, className }: DialogProps)
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-black/10 backdrop-blur-sm flex items-center justify-center p-4"
+      className="fixed inset-0 z-[120] bg-black/10 backdrop-blur-sm flex items-center justify-center p-4"
       onClick={() => onOpenChange(false)}
     >
       <div

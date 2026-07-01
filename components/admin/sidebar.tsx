@@ -4,30 +4,37 @@ import * as React from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { 
+import {
   Coffee, Home, Package, Monitor, ShoppingCart, Folder, MapPin,
   Clipboard, Clock, DollarSign, Users, Calendar, RotateCcw,
   Tag, FileText, Target, Star, Bell, CreditCard, TrendingUp,
-  Settings, Eye, Circle, X
+  Settings, Eye, Circle, X, Grid
 } from "lucide-react"
 
 const GR = [
   { label: "OVERVIEW", items: [{ id: "dashboard", icon: Home, label: "Dashboard", href: "/admin/dashboard" }] },
-  { label: "OPERATIONS", items: [
+  {
+    label: "OPERATIONS", items: [
       { id: "orders", icon: Package, label: "Orders", href: "/admin/orders" },
       { id: "pos", icon: Monitor, label: "POS Terminal", href: "/admin/pos" },
-      { id: "kds", icon: Coffee, label: "Kitchen Display", href: "/admin/kds" }
-  ]},
-  { label: "MENU", items: [
+      { id: "kds", icon: Coffee, label: "Kitchen Display", href: "/admin/kds" },
+      { id: "tables", icon: Grid, label: "Tables", href: "/admin/tables" }
+    ]
+  },
+  {
+    label: "MENU", items: [
       { id: "products", icon: ShoppingCart, label: "Products", href: "/admin/products" },
       { id: "categories", icon: Folder, label: "Categories", href: "/admin/categories" }
-  ]},
-  { label: "BRANCHES", items: [
+    ]
+  },
+  {
+    label: "BRANCHES", items: [
       { id: "branches", icon: MapPin, label: "Branches", href: "/admin/branches" },
-      { id: "stock", icon: Clipboard, label: "Stock", href: "/admin/stock" },
-      { id: "tables", icon: Settings, label: "Tables", href: "/admin/tables" }
-  ]},
-  { label: "POS MGMT", items: [
+      { id: "stock", icon: Clipboard, label: "Stock", href: "/admin/stock" }
+    ]
+  },
+  {
+    label: "POS MGMT", items: [
       { id: "shifts", icon: Clock, label: "Shifts", href: "/admin/shifts" },
       { id: "cash", icon: DollarSign, label: "Cash Mgmt", href: "/admin/cash" },
       { id: "employees", icon: Users, label: "Employees", href: "/admin/employees" },
@@ -35,29 +42,38 @@ const GR = [
       { id: "refunds", icon: RotateCcw, label: "Refunds", href: "/admin/refunds" },
       { id: "discounts", icon: Tag, label: "Discounts", href: "/admin/discounts" },
       { id: "taxconfig", icon: FileText, label: "Tax Config", href: "/admin/taxconfig" }
-  ]},
-  { label: "INVENTORY", items: [
+    ]
+  },
+  {
+    label: "INVENTORY", items: [
       { id: "inventory", icon: Target, label: "Ingredients", href: "/admin/inventory" },
       { id: "suppliers", icon: Package, label: "Suppliers", href: "/admin/suppliers" },
       { id: "purchaseorders", icon: FileText, label: "Purchase Orders", href: "/admin/purchaseorders" },
       { id: "stockopname", icon: Clipboard, label: "Stock Opname", href: "/admin/stockopname" }
-  ]},
-  { label: "MARKETING", items: [
+    ]
+  },
+  {
+    label: "MARKETING", items: [
       { id: "campaigns", icon: Target, label: "Campaigns", href: "/admin/campaigns" },
       { id: "vouchers", icon: Tag, label: "Vouchers", href: "/admin/vouchers" },
       { id: "banners", icon: Eye, label: "Banners", href: "/admin/banners" },
       { id: "loyalty", icon: Star, label: "Loyalty", href: "/admin/loyalty" }
-  ]},
-  { label: "CRM", items: [
+    ]
+  },
+  {
+    label: "CRM", items: [
       { id: "customers", icon: Users, label: "Customers", href: "/admin/customers" },
       { id: "notifications", icon: Bell, label: "Notifications", href: "/admin/notifications" }
-  ]},
-  { label: "SYSTEM", items: [
+    ]
+  },
+  {
+    label: "SYSTEM", items: [
       { id: "payments", icon: CreditCard, label: "Payments", href: "/admin/payments" },
       { id: "content", icon: FileText, label: "Content", href: "/admin/content" },
       { id: "reports", icon: TrendingUp, label: "Reports", href: "/admin/reports" },
       { id: "users", icon: Settings, label: "Users", href: "/admin/users" }
-  ]}
+    ]
+  }
 ];
 
 interface SidebarProps {
@@ -68,11 +84,30 @@ interface SidebarProps {
   userName?: string;
   userEmail?: string;
   dineinEnabled?: boolean;
+  hasActiveShift?: boolean;
 }
 
-export function Sidebar({ open, setOpen, isMobile, role, userName, userEmail, dineinEnabled }: SidebarProps) {
+export function Sidebar({ open, setOpen, isMobile, role, userName, userEmail, dineinEnabled, hasActiveShift }: SidebarProps) {
   const pathname = usePathname();
-  
+  const [currentBranch, setCurrentBranch] = React.useState("all");
+
+  React.useEffect(() => {
+    import("@/app/actions/branch").then(mod => {
+      mod.getBranchCookie().then(val => {
+        setCurrentBranch(val);
+      });
+    });
+
+    // Listen to storage changes for branch
+    const interval = setInterval(() => {
+      const stored = sessionStorage.getItem("er_selected_branch");
+      if (stored && stored !== currentBranch) {
+        setCurrentBranch(stored);
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [currentBranch]);
+
   // Filter menu based on role and branch config
   const filteredGR = React.useMemo(() => {
     return GR.map(group => {
@@ -84,7 +119,7 @@ export function Sidebar({ open, setOpen, isMobile, role, userName, userEmail, di
         if (group.label === "MARKETING") {
           currentItems = currentItems.filter(item => item.id === "vouchers");
         } else {
-          currentItems = currentItems.filter(item => 
+          currentItems = currentItems.filter(item =>
             !["suppliers", "notifications", "taxconfig"].includes(item.id)
           ).map(item => {
             if (item.id === "branches") {
@@ -101,7 +136,7 @@ export function Sidebar({ open, setOpen, isMobile, role, userName, userEmail, di
         if (group.label === "CRM") return null;
         if (group.label === "SYSTEM") return null;
         if (group.label === "BRANCHES") {
-          currentItems = currentItems.filter(item => ["tables", "stock"].includes(item.id));
+          currentItems = currentItems.filter(item => ["stock"].includes(item.id));
         }
         if (group.label === "POS MGMT") {
           currentItems = currentItems.filter(item => ["shifts", "cash", "attendance", "refunds", "discounts"].includes(item.id));
@@ -114,15 +149,18 @@ export function Sidebar({ open, setOpen, isMobile, role, userName, userEmail, di
         }
       }
 
-      // Branch config filtering removed so Tables is always visible
-      
+      // Hide branches menu if not 'all' branches (Only for SUPERADMIN)
+      if (role === "SUPERADMIN" && currentBranch !== "all" && group.label === "BRANCHES") {
+        currentItems = currentItems.filter(item => item.id !== "branches");
+      }
+
       if (currentItems.length === 0) return null;
       return { ...group, items: currentItems };
     }).filter(Boolean);
-  }, [role, dineinEnabled]);
+  }, [role, dineinEnabled, hasActiveShift, currentBranch]);
 
   return (
-    <div 
+    <div
       className={cn(
         "print:hidden fixed md:sticky top-0 left-0 z-50 h-screen flex flex-col transition-all duration-200 overflow-hidden",
         "bg-sidebar text-sidebar-foreground border-r border-sidebar-border shadow-sm",
@@ -166,15 +204,15 @@ export function Sidebar({ open, setOpen, isMobile, role, userName, userEmail, di
               const active = pathname.startsWith(item.href);
               const Icon = item.icon || Circle;
               return (
-                <Link 
-                  key={item.id} 
+                <Link
+                  key={item.id}
                   href={item.href}
                   prefetch={false}
                   className={cn(
                     "flex items-center gap-2.5 mx-1.5 my-[2px] rounded-md cursor-pointer transition-all duration-200 border-l-4",
                     open || isMobile ? "px-3 py-2 justify-start" : "py-2 justify-center px-0",
-                    active 
-                      ? "bg-sidebar-active-bg text-sidebar-active-text font-bold border-brand-blue shadow-sm" 
+                    active
+                      ? "bg-sidebar-active-bg text-sidebar-active-text font-bold border-brand-blue shadow-sm"
                       : "bg-transparent text-sidebar-muted font-medium border-transparent hover:text-sidebar-foreground hover:bg-sidebar-hover-bg"
                   )}
                   title={item.label}
@@ -192,7 +230,7 @@ export function Sidebar({ open, setOpen, isMobile, role, userName, userEmail, di
         {(open || isMobile) && (
           <div className="flex items-center gap-2 p-1.5">
             <div className="w-7 h-7 rounded-full bg-brand-blue flex items-center justify-center font-bold text-[11px] text-brand-blue-foreground shrink-0 uppercase">
-              {userName ? userName.slice(0,2) : "AD"}
+              {userName ? userName.slice(0, 2) : "AD"}
             </div>
             <div className="overflow-hidden">
               <div className="text-[11px] font-semibold truncate">{userName || "Admin"}</div>

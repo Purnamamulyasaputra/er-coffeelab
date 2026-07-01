@@ -32,6 +32,8 @@ export async function POST(request: NextRequest) {
       customerId: data.customerId || null,
       shiftId: session.shiftId || 1,
       employeeId: data.employeeId || null,
+      adminId: session.sub ? Number(session.sub) : null,
+      role: session.role || null,
       orderType: data.orderType || 'DINE_IN',
       source: 'POS',
       subtotal: data.subtotal,

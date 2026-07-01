@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Plus, Pencil, Trash2, Check, X } from "lucide-react"
+import { Pencil, Trash2, Check } from "lucide-react"
 import { PageHeader } from "@/components/shared/page-header"
 import { DataTable } from "@/components/shared/data-table"
 import { Button } from "@/components/ui/button"
@@ -38,7 +38,7 @@ export function PurchaseOrdersClient({
 
   const [supplierId, setSupplierId] = React.useState(suppliers[0]?.id?.toString() || "")
   const [branchId, setBranchId] = React.useState(activeBranchId?.toString() || branches[0]?.id?.toString() || "")
-  const [items, setItems] = React.useState<{ ingredientId: string, quantity: string, price: string, unit: string }[]>([])
+  const [items, setItems] = React.useState<{ ingredientId: string, name: string, quantity: string, price: string, unit: string }[]>([])
 
   const [editPoNumber, setEditPoNumber] = React.useState<string | null>(null)
   const [deleteModalOpen, setDeleteModalOpen] = React.useState(false)
@@ -48,22 +48,24 @@ export function PurchaseOrdersClient({
   const [markReceivedPoId, setMarkReceivedPoId] = React.useState<string | null>(null)
 
   const columns = [
-    { header: "PO#", accessorKey: "id" as const },
-    { header: "Supplier", accessorKey: "supplier" as const },
-    ...(!activeBranchId ? [{ header: "Branch", accessorKey: "branch" as const }] : []),
-    { header: "Total", cell: (item: any) => formatMoney(item.total) },
+    { header: "PO#", cell: (item: any) => <span className="whitespace-nowrap font-medium">{item.id}</span> },
+    { header: "Supplier", cell: (item: any) => <span className="whitespace-nowrap">{item.supplier}</span> },
+    ...(!activeBranchId ? [{ header: "Branch", cell: (item: any) => <span className="whitespace-nowrap">{item.branch}</span> }] : []),
+    { header: "Total", cell: (item: any) => <span className="whitespace-nowrap">{formatMoney(item.total)}</span> },
     {
       header: "Status",
       cell: (item: any) => {
         return (
-          <Badge variant={getStatusVariant(item.status)}>
-            {item.status}
-          </Badge>
+          <span className="whitespace-nowrap">
+            <Badge variant={getStatusVariant(item.status)}>
+              {item.status}
+            </Badge>
+          </span>
         )
       }
     },
-    { header: "By", accessorKey: "by" as const },
-    { header: "Date", accessorKey: "date" as const },
+    { header: "By", cell: (item: any) => <span className="whitespace-nowrap">{item.by}</span> },
+    { header: "Date", cell: (item: any) => <span className="whitespace-nowrap">{item.date}</span> },
     {
       header: "Actions",
       cell: (item: any) => (
@@ -92,7 +94,7 @@ export function PurchaseOrdersClient({
 
   const supplierOptions = suppliers.map(s => ({ label: s.name, value: s.id.toString() }))
   const branchOptions = branches.map(b => ({ label: b.name, value: b.id.toString() }))
-  const ingredientOptions = ingredients.map(i => ({ label: `${i.name} (${i.unit})`, value: i.id.toString() }))
+
 
   const handleMarkReceived = async () => {
     if (!markReceivedPoId) return;
@@ -125,12 +127,16 @@ export function PurchaseOrdersClient({
       setEditPoNumber(poNumber);
       setSupplierId(data.po.supplier_id.toString());
       setBranchId(data.po.branch_id.toString());
-      setItems(data.items.map((i: any) => ({
-        ingredientId: i.ingredient_id.toString(),
-        quantity: i.quantity.toString(),
-        price: i.price.toString(),
-        unit: i.unit
-      })));
+      setItems(ingredients.map(ing => {
+        const existingItem = data.items.find((i: any) => i.ingredient_id.toString() === ing.id.toString());
+        return {
+          ingredientId: ing.id.toString(),
+          name: ing.name,
+          quantity: existingItem ? existingItem.quantity.toString() : "",
+          price: existingItem ? existingItem.price.toString() : ing.cost.toString(),
+          unit: ing.unit
+        }
+      }));
       setOpen(true);
     } catch (e: any) {
       toast(e.message, "error");
@@ -143,7 +149,13 @@ export function PurchaseOrdersClient({
     setEditPoNumber(null);
     setSupplierId(suppliers[0]?.id?.toString() || "");
     setBranchId(activeBranchId?.toString() || branches[0]?.id?.toString() || "");
-    setItems([]);
+    setItems(ingredients.map(ing => ({
+      ingredientId: ing.id.toString(),
+      name: ing.name,
+      quantity: "",
+      price: ing.cost.toString(),
+      unit: ing.unit
+    })));
     setOpen(true);
   }
 
@@ -165,31 +177,14 @@ export function PurchaseOrdersClient({
     }
   }
 
-  const addItem = () => {
-    if (ingredients.length === 0) return;
-    const firstIng = ingredients[0];
-    setItems([...items, { ingredientId: firstIng.id.toString(), quantity: "1", price: firstIng.cost.toString(), unit: firstIng.unit }])
-  }
+
 
   const updateItem = (index: number, field: string, value: string) => {
     const newItems = [...items];
     const itemToUpdate = newItems[index] as any;
     itemToUpdate[field] = value;
 
-    // Auto update price and unit when ingredient changes
-    if (field === 'ingredientId') {
-      const ing = ingredients.find(i => i.id.toString() === value);
-      if (ing) {
-        itemToUpdate.price = ing.cost.toString();
-        itemToUpdate.unit = ing.unit;
-      }
-    }
-
     setItems(newItems);
-  }
-
-  const removeItem = (index: number) => {
-    setItems(items.filter((_, i) => i !== index));
   }
 
   const calculatedTotal = items.reduce((acc, curr) => {
@@ -197,8 +192,10 @@ export function PurchaseOrdersClient({
   }, 0);
 
   const handleSave = async () => {
-    if (items.length === 0) {
-      toast("Please add at least one item", "error");
+    const validItems = items.filter(i => Number(i.quantity) > 0);
+
+    if (validItems.length === 0) {
+      toast("Please enter a quantity for at least one item", "error");
       return;
     }
 
@@ -214,7 +211,7 @@ export function PurchaseOrdersClient({
           supplier_id: Number(supplierId),
           branch_id: Number(branchId),
           total_amount: calculatedTotal,
-          items: items.map(i => ({
+          items: validItems.map(i => ({
             ingredient_id: Number(i.ingredientId),
             quantity: Number(i.quantity),
             price: Number(i.price),
@@ -243,8 +240,8 @@ export function PurchaseOrdersClient({
         title="Purchase Orders"
         description="Procurement"
         action={
-          <Button onClick={handleAdd} className="gap-2">
-            <Plus size={14} /> Add
+          <Button onClick={handleAdd} className="bg-primary text-primary-foreground gap-2">
+            Add
           </Button>
         }
       />
@@ -269,51 +266,62 @@ export function PurchaseOrdersClient({
           </div>
 
           <div className="flex flex-col gap-2 mt-2">
-            <div className="flex justify-between items-center">
-              <Label className="text-base font-semibold">Items</Label>
-              <Button size="sm" variant="outline" onClick={addItem} className="h-8 gap-1"><Plus size={14} /> Add Item</Button>
+            <div className="flex justify-between items-center border-b pb-2">
+              <Label className="text-base font-semibold">Ingredients List</Label>
             </div>
             {items.length === 0 ? (
-              <div className="text-center py-6 text-slate-500 border border-dashed rounded-md bg-slate-50">No items added yet.</div>
+              <div className="text-center py-6 text-slate-500 border border-dashed rounded-md bg-slate-50">No ingredients available.</div>
             ) : (
-              <div className="flex flex-col gap-4 pb-48">
-                {items.map((item, idx) => (
-                  <div key={idx} className="flex gap-4 items-end">
-                    <div className="flex-1 flex flex-col gap-1.5">
-                      <Label className="text-sm">Ingredient</Label>
-                      <Select options={ingredientOptions} value={item.ingredientId} onChange={e => updateItem(idx, 'ingredientId', e.target.value)} />
-                    </div>
-                    <div className="w-24 flex flex-col gap-1.5">
-                      <Label className="text-sm">Qty ({item.unit})</Label>
-                      <Input
-                        type="text"
-                        className="bg-background"
-                        value={item.quantity ? Number(item.quantity).toLocaleString('id-ID') : ""}
-                        onChange={e => updateItem(idx, 'quantity', e.target.value.replace(/\D/g, ''))}
-                      />
-                    </div>
-                    <div className="w-32 flex flex-col gap-1.5">
-                      <Label className="text-sm">Unit Price</Label>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[13px] text-slate-500">Rp</span>
-                        <Input
-                          type="text"
-                          className="pl-8 bg-background"
-                          value={item.price ? Number(item.price).toLocaleString('id-ID') : ""}
-                          onChange={e => updateItem(idx, 'price', e.target.value.replace(/\D/g, ''))}
-                        />
-                      </div>
-                    </div>
-                    <Button size="icon" variant="ghost" className="h-9 w-9 text-destructive hover:bg-destructive/10 mb-[1px]" onClick={() => removeItem(idx)}>
-                      <X size={16} />
-                    </Button>
-                  </div>
-                ))}
+              <div className="pb-4 overflow-x-auto border rounded-md">
+                <table className="w-full text-[13px] text-left">
+                  <thead className="text-xs text-slate-500 bg-slate-100/80 uppercase sticky top-0 z-10">
+                    <tr>
+                      <th className="px-3 py-2 font-semibold border-b">Ingredient</th>
+                      <th className="px-3 py-2 font-semibold border-b w-[100px]">Qty</th>
+                      <th className="px-3 py-2 font-semibold border-b w-[120px]">Unit Price</th>
+                      <th className="px-3 py-2 font-semibold border-b w-[120px] text-right">Subtotal</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {items.map((item, idx) => {
+                      const subtotal = (Number(item.quantity) || 0) * (Number(item.price) || 0);
+                      return (
+                        <tr key={idx} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                          <td className="px-3 py-1.5 font-medium text-slate-700">
+                            {item.name} <span className="text-slate-400 font-normal">({item.unit})</span>
+                          </td>
+                          <td className="px-3 py-1.5">
+                            <Input
+                              type="text"
+                              className="h-7 text-[13px] bg-background border-slate-200 px-2 shadow-none focus-visible:ring-1"
+                              placeholder="0"
+                              value={item.quantity ? Number(item.quantity).toLocaleString('id-ID') : ""}
+                              onChange={e => updateItem(idx, 'quantity', e.target.value.replace(/\D/g, ''))}
+                            />
+                          </td>
+                          <td className="px-3 py-1.5">
+                            <Input
+                              type="text"
+                              className="h-7 text-[13px] bg-background border-slate-200 px-2 shadow-none focus-visible:ring-1"
+                              value={item.price ? Number(item.price).toLocaleString('id-ID') : ""}
+                              onChange={e => updateItem(idx, 'price', e.target.value.replace(/\D/g, ''))}
+                            />
+                          </td>
+                          <td className="px-3 py-1.5 text-right font-semibold text-slate-600">
+                            {subtotal > 0 ? subtotal.toLocaleString('id-ID') : "-"}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
 
-                <div className="flex justify-between items-center mt-4 p-4 bg-slate-100 rounded-lg font-semibold">
-                  <span className="text-slate-600">Total Amount</span>
-                  <span className="text-emerald-700 text-xl">{formatMoney(calculatedTotal)}</span>
-                </div>
+            {items.length > 0 && (
+              <div className="flex justify-between items-center mt-2 p-3 bg-slate-100 rounded-lg font-semibold">
+                <span className="text-slate-600">Total Amount</span>
+                <span className="text-emerald-700 text-lg">{formatMoney(calculatedTotal)}</span>
               </div>
             )}
           </div>
@@ -341,20 +349,20 @@ export function PurchaseOrdersClient({
         isOpen={deleteModalOpen}
         onClose={() => setDeleteModalOpen(false)}
         type="danger"
-        title="Hapus Purchase Order"
-        message="Apakah Anda yakin ingin menghapus purchase order ini?"
+        title="Delete Purchase Order"
+        message="Are you sure you want to delete?"
         onConfirm={handleDelete}
-        confirmText={loading ? "Menghapus..." : "Hapus"}
+        confirmText={loading ? "Deleting..." : "Delete"}
       />
 
       <ConfirmationModal
         isOpen={markReceivedModalOpen}
         onClose={() => setMarkReceivedModalOpen(false)}
         type="info"
-        title="Tandai Diterima"
-        message={`Apakah Anda yakin ingin menandai ${markReceivedPoId} sebagai diterima?`}
+        title="Mark as Received"
+        message={`Are you sure you want to mark this ${markReceivedPoId} as received?`}
         onConfirm={handleMarkReceived}
-        confirmText={loading ? "Memproses..." : "Ya"}
+        confirmText={loading ? "Processing..." : "Yes"}
       />
     </div>
   )

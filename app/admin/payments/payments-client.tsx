@@ -7,6 +7,7 @@ import { DataTable } from "@/components/shared/data-table"
 import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
 import { ConfirmationModal } from "@/components/ui/confirmation-modal"
+import { useToast } from "@/components/ui/use-toast"
 
 export function PaymentsClient({ initialData }: { initialData: any[] }) {
   const router = useRouter()
@@ -15,6 +16,8 @@ export function PaymentsClient({ initialData }: { initialData: any[] }) {
   const [editingId, setEditingId] = React.useState<number | null>(null)
   const [loading, setLoading] = React.useState(false)
   const [deleteConfirmId, setDeleteConfirmId] = React.useState<number | null>(null)
+  const [uploadingLogo, setUploadingLogo] = React.useState(false)
+  const { toast } = useToast()
 
   const [formData, setFormData] = React.useState({
     name: "",
@@ -84,6 +87,37 @@ export function PaymentsClient({ initialData }: { initialData: any[] }) {
     }
   }
 
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    if (file.size > 2 * 1024 * 1024) {
+      toast("File size exceeds 2MB limit.", "error")
+      return
+    }
+
+    setUploadingLogo(true)
+    try {
+      const form = new FormData()
+      form.append('file', file)
+
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: form
+      })
+      if (!res.ok) throw new Error("Upload failed")
+      
+      const blob = await res.json()
+      setFormData(prev => ({ ...prev, logo_url: blob.url }))
+      toast("Logo uploaded successfully", "success")
+    } catch (err) {
+      console.error(err)
+      toast("Failed to upload logo", "error")
+    } finally {
+      setUploadingLogo(false)
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
@@ -120,7 +154,11 @@ export function PaymentsClient({ initialData }: { initialData: any[] }) {
     { 
       header: "Logo", 
       cell: (item: any) => (
-        item.logo_url ? <img src={item.logo_url} alt={item.name} className="h-6 w-auto object-contain" /> : <div className="h-6 w-6 bg-muted rounded-full" />
+        item.logo_url ? (
+          <div className="w-[60px] flex items-center justify-start">
+            <img src={`/api/image?url=${encodeURIComponent(item.logo_url)}`} alt={item.name} className="max-w-[60px] h-6 object-contain object-left" />
+          </div>
+        ) : <div className="h-6 w-10 bg-muted rounded-md" />
       )
     },
     { header: "Code", accessorKey: "code" as const },
@@ -264,14 +302,24 @@ export function PaymentsClient({ initialData }: { initialData: any[] }) {
               </div>
 
               <div>
-                <label className="block text-[12px] font-medium text-muted-foreground mb-1.5">Logo URL</label>
-                <input
-                  type="text"
-                  value={formData.logo_url}
-                  onChange={e => setFormData({ ...formData, logo_url: e.target.value })}
-                  className="w-full bg-muted border border-border rounded-lg px-3.5 py-2.5 text-foreground focus:outline-none focus:border-brand-blue transition-colors text-[13px] placeholder:text-muted-foreground/50"
-                  placeholder="https://..."
-                />
+                <label className="block text-[12px] font-medium text-muted-foreground mb-1.5">Payment Logo (Max 2MB)</label>
+                <div className="flex items-center gap-3">
+                  {formData.logo_url && (
+                    <div className="w-12 h-10 rounded-md border border-border bg-muted flex items-center justify-center overflow-hidden flex-shrink-0">
+                      <img src={`/api/image?url=${encodeURIComponent(formData.logo_url)}`} alt="Logo Preview" className="max-w-full max-h-full object-contain p-1" />
+                    </div>
+                  )}
+                  <div className="flex-1">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      disabled={uploadingLogo}
+                      onChange={handleLogoUpload}
+                      className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-foreground focus:outline-none focus:border-brand-blue transition-colors text-[12px] file:mr-3 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-[11px] file:font-semibold file:bg-brand-blue/10 file:text-brand-blue hover:file:bg-brand-blue/20"
+                    />
+                    {uploadingLogo && <p className="text-[10px] text-brand-blue mt-1">Uploading...</p>}
+                  </div>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">

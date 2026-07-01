@@ -49,8 +49,8 @@ export function CategoriesClient({ initialData }: { initialData: any[] }) {
     { header: "Name", accessorKey: "name" as const },
     { header: "Products", accessorKey: "products" as const },
     { header: "Sort", accessorKey: "sort" as const },
-    { 
-      header: "Status", 
+    {
+      header: "Status",
       cell: (item: any) => (
         <Badge variant={item.status === "ACTIVE" ? "success" : "destructive"}>
           {item.status}
@@ -95,11 +95,11 @@ export function CategoriesClient({ initialData }: { initialData: any[] }) {
         const d = await res.json()
         throw new Error(d.error || "Failed to save category")
       }
-      
+
       toast(editId ? "Category updated successfully!" : "Category added successfully!", "success")
       setOpen(false)
       router.refresh()
-      
+
       setName("")
     } catch (e: any) {
       toast(e.message, "error")
@@ -131,9 +131,9 @@ export function CategoriesClient({ initialData }: { initialData: any[] }) {
 
   return (
     <div>
-      <PageHeader 
-        title="Categories" 
-        description={`${initialData.length} items`} 
+      <PageHeader
+        title="Categories"
+        description={`${initialData.length} items`}
         action={
           <Button onClick={openAddModal} className="gap-2">
             <Plus size={14} /> Add
@@ -141,7 +141,7 @@ export function CategoriesClient({ initialData }: { initialData: any[] }) {
         }
       />
 
-      <DataTable 
+      <DataTable
         data={initialData}
         columns={columns}
         keyExtractor={item => item.id.toString()}
@@ -166,17 +166,17 @@ export function CategoriesClient({ initialData }: { initialData: any[] }) {
           </div>
         </div>
         <DialogFooter className="mt-4">
-          <Button 
-            variant="secondary" 
-            onClick={() => setOpen(false)} 
-            disabled={loading} 
+          <Button
+            variant="secondary"
+            onClick={() => setOpen(false)}
+            disabled={loading}
             className="bg-slate-600 hover:bg-slate-700 text-white border-0 font-medium px-6"
           >
             Cancel
           </Button>
-          <Button 
-            className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-6 disabled:opacity-50 disabled:cursor-not-allowed" 
-            onClick={handleSave} 
+          <Button
+            className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-6 disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={handleSave}
             disabled={loading || !name}
           >
             <Check size={16} /> {loading ? "Saving..." : "Save"}
@@ -189,8 +189,8 @@ export function CategoriesClient({ initialData }: { initialData: any[] }) {
         onClose={() => setDeleteModalOpen(false)}
         onConfirm={handleDelete}
         title="Delete Category"
-        message="Are you sure you want to delete this category? Products assigned to this category might need to be reassigned."
-        confirmText={loading ? "Deleting..." : "Yes, Delete"}
+        message="Are you sure you want to delete this category?"
+        confirmText={loading ? "Deleting..." : "Delete"}
         type="danger"
       />
     </div>

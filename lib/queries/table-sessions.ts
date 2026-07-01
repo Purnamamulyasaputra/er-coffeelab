@@ -1,6 +1,19 @@
 import { sql } from "@/lib/db"
 
 export async function getActiveSessions(branchId?: number) {
+  // Auto-close sessions older than 24 hours
+  await sql`
+    WITH expired_sessions AS (
+      UPDATE table_sessions
+      SET status = 'CLOSED', closed_at = NOW()
+      WHERE status = 'OPEN' AND EXTRACT(EPOCH FROM (NOW() - opened_at))/3600 > 24
+      RETURNING id, table_id
+    )
+    UPDATE store_tables 
+    SET status = 'AVAILABLE', current_session_id = NULL, occupied_since = NULL
+    WHERE id IN (SELECT table_id FROM expired_sessions)
+  `;
+
   return await sql`
     SELECT 
       ts.*,
@@ -16,6 +29,19 @@ export async function getActiveSessions(branchId?: number) {
 }
 
 export async function getActiveSessionsWithOrders(branchId?: number) {
+  // Auto-close sessions older than 24 hours
+  await sql`
+    WITH expired_sessions AS (
+      UPDATE table_sessions
+      SET status = 'CLOSED', closed_at = NOW()
+      WHERE status = 'OPEN' AND EXTRACT(EPOCH FROM (NOW() - opened_at))/3600 > 24
+      RETURNING id, table_id
+    )
+    UPDATE store_tables 
+    SET status = 'AVAILABLE', current_session_id = NULL, occupied_since = NULL
+    WHERE id IN (SELECT table_id FROM expired_sessions)
+  `;
+
   const sessions = await sql`
     SELECT 
       ts.*,

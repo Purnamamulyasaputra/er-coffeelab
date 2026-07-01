@@ -4,6 +4,7 @@ import * as React from "react"
 import { PageHeader } from "@/components/shared/page-header"
 import { DataTable } from "@/components/shared/data-table"
 import { Badge } from "@/components/ui/badge"
+import { ConfirmationModal } from "@/components/ui/confirmation-modal"
 
 import { Plus, Pencil, Trash2, Check, LogOut, Wallet, UserCheck, Play, LockKeyhole } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -61,14 +62,16 @@ export function ShiftsClient({
   const [closeOpen, setCloseOpen] = React.useState(false)
   const [activeShift, setActiveShift] = React.useState<ShiftData | null>(null)
   const [actualCash, setActualCash] = React.useState("")
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = React.useState(false)
+  const [shiftToDelete, setShiftToDelete] = React.useState<string | number | null>(null)
 
   const columns = [
     { header: "No", cell: (_: unknown, index: number) => index + 1 },
-    { header: "Employee", accessorKey: "emp" as const },
-    ...(showBranchColumn ? [{ header: "Branch", accessorKey: "branch" as const }] : []),
-    { header: "Date", accessorKey: "date" as const },
-    { header: "Open", accessorKey: "open" as const },
-    { header: "Close", accessorKey: "close" as const },
+    { header: "Employee", cell: (item: ShiftData) => <span className="whitespace-nowrap">{item.emp}</span> },
+    ...(showBranchColumn ? [{ header: "Branch", cell: (item: ShiftData) => <span className="whitespace-nowrap">{item.branch}</span> }] : []),
+    { header: "Date", cell: (item: ShiftData) => <span className="whitespace-nowrap">{item.date}</span> },
+    { header: "Open", cell: (item: ShiftData) => <span className="whitespace-nowrap">{item.open}</span> },
+    { header: "Close", cell: (item: ShiftData) => <span className="whitespace-nowrap">{item.close}</span> },
     { header: "Starting", cell: (item: ShiftData) => <span className="font-medium text-muted-foreground">{formatMoney(item.starting as number)}</span> },
     { header: "Actual", cell: (item: ShiftData) => <span className="font-medium">{formatMoney(item.sales)}</span> },
     { 
@@ -116,7 +119,10 @@ export function ShiftsClient({
             </Button>
           )}
           {isAdmin && (
-            <Button size="icon" className="h-[34px] w-[34px] bg-destructive hover:bg-destructive/90 text-white rounded-[10px]" onClick={() => handleDelete(item.id)}>
+            <Button size="icon" className="h-[34px] w-[34px] bg-destructive hover:bg-destructive/90 text-white rounded-[10px]" onClick={() => {
+              setShiftToDelete(item.id);
+              setDeleteConfirmOpen(true);
+            }}>
               <Trash2 size={14} />
             </Button>
           )}
@@ -190,13 +196,15 @@ export function ShiftsClient({
     }
   }
 
-  const handleDelete = async (id: string | number) => {
-    if (!confirm("Are you sure you want to delete this shift?")) return;
+  const confirmDelete = async () => {
+    if (!shiftToDelete) return;
     setLoading(true)
     try {
-      const res = await fetch(`/api/shifts?id=${id}`, { method: "DELETE" })
+      const res = await fetch(`/api/shifts?id=${shiftToDelete}`, { method: "DELETE" })
       if (!res.ok) throw new Error("Failed to delete shift")
       toast("Shift deleted successfully", "success")
+      setDeleteConfirmOpen(false)
+      setShiftToDelete(null)
       router.refresh()
     } catch (e) {
       toast((e as Error).message, "error")
@@ -291,6 +299,16 @@ export function ShiftsClient({
           <Button variant="secondary" className="w-full sm:w-auto h-11" onClick={() => setCloseOpen(false)} disabled={loading}>Cancel</Button>
         </DialogFooter>
       </Dialog>
+
+      <ConfirmationModal 
+        isOpen={deleteConfirmOpen}
+        onClose={() => setDeleteConfirmOpen(false)}
+        onConfirm={confirmDelete}
+        title="Delete Shift"
+        message="Are you sure you want to delete this shift?"
+        confirmText={loading ? "Deleting..." : "Delete"}
+        type="danger"
+      />
     </div>
   )
 }

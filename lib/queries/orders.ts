@@ -14,7 +14,18 @@ export async function getOrders(branchId?: number) {
         to_char(o.created_at AT TIME ZONE 'Asia/Jakarta', 'HH24:MI') as tm, 
         COALESCE(c.name, 'Walk-in') as cu,
         t.table_number as tbl,
-        e.name as emp
+        COALESCE(
+          e.name,
+          (
+            SELECT a.name 
+            FROM order_status_logs osl 
+            JOIN admins a ON a.id = osl.actor_id 
+            WHERE osl.order_id = o.id AND osl.actor_type IN ('STORE_ADMIN', 'SUPERADMIN', 'ADMIN')
+            ORDER BY osl.id ASC
+            LIMIT 1
+          ),
+          CASE WHEN o.order_source = 'POS' THEN 'Admin' ELSE '-' END
+        ) as emp
       FROM orders o
       LEFT JOIN branches b ON o.branch_id = b.id
       LEFT JOIN customers c ON o.customer_id = c.id
@@ -39,7 +50,18 @@ export async function getOrders(branchId?: number) {
       to_char(o.created_at AT TIME ZONE 'Asia/Jakarta', 'HH24:MI') as tm, 
       COALESCE(c.name, 'Walk-in') as cu,
       t.table_number as tbl,
-      e.name as emp
+      COALESCE(
+        e.name,
+        (
+          SELECT a.name 
+          FROM order_status_logs osl 
+          JOIN admins a ON a.id = osl.actor_id 
+          WHERE osl.order_id = o.id AND osl.actor_type IN ('STORE_ADMIN', 'SUPERADMIN', 'ADMIN')
+          ORDER BY osl.id ASC
+          LIMIT 1
+        ),
+        CASE WHEN o.order_source = 'POS' THEN 'Admin Outlet' ELSE '-' END
+      ) as emp
     FROM orders o
     LEFT JOIN branches b ON o.branch_id = b.id
     LEFT JOIN customers c ON o.customer_id = c.id

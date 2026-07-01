@@ -98,9 +98,9 @@ export function XenditVaModal({
           {logoUrl && (
             <img src={logoUrl} alt={methodName} className="h-10 object-contain mb-2" />
           )}
-          <DialogTitle className="text-center">Pembayaran via {methodName}</DialogTitle>
+          <DialogTitle className="text-center">Payment via {methodName}</DialogTitle>
           <DialogDescription className="text-center">
-            Transfer sesuai nominal ke nomor Virtual Account di bawah
+            Transfer the exact amount to the Virtual Account number below
           </DialogDescription>
         </DialogHeader>
 
@@ -114,8 +114,8 @@ export function XenditVaModal({
               {/* VA Number */}
               <div className="bg-muted p-4 rounded-xl border flex justify-between items-center">
                 <div>
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Nomor Virtual Account</p>
-                  <p className="text-xl font-mono font-bold tracking-widest">{accountNumber || "Memuat..."}</p>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Virtual Account Number</p>
+                  <p className="text-xl font-mono font-bold tracking-widest">{accountNumber || "Loading..."}</p>
                 </div>
                 <Button variant="ghost" size="icon" onClick={handleCopy} className="shrink-0">
                   {copied ? <CheckCircle2 className="text-emerald-500" /> : <Copy />}
@@ -125,7 +125,7 @@ export function XenditVaModal({
               {/* Instructions */}
               {instructions && instructions.length > 0 && (
                 <div className="bg-card border rounded-xl p-4 text-sm space-y-2">
-                  <p className="font-semibold">Panduan Transfer:</p>
+                  <p className="font-semibold">Transfer Instructions:</p>
                   <ul className="list-decimal list-inside space-y-1 text-muted-foreground">
                     {instructions.map((inst, idx) => (
                       <li key={idx}>{inst.instruction_text}</li>
@@ -137,7 +137,7 @@ export function XenditVaModal({
               {/* Waiting indicator */}
               <div className="flex items-center justify-center gap-2 text-muted-foreground pt-2">
                 <Loader2 className="w-4 h-4 animate-spin" />
-                <span className="text-sm">Menunggu konfirmasi transfer...</span>
+                <span className="text-sm">Waiting for transfer confirmation...</span>
               </div>
             </div>
           )}
@@ -147,7 +147,7 @@ export function XenditVaModal({
           {status === "FAILED" && (
             <div className="w-full py-8 flex flex-col items-center justify-center bg-red-50 dark:bg-red-950/20 rounded-xl text-red-600">
               <XCircle className="w-16 h-16 mb-3" />
-              <div className="font-bold text-lg">Pembayaran Gagal</div>
+              <div className="font-bold text-lg">Payment Failed</div>
             </div>
           )}
         </div>
@@ -167,7 +167,7 @@ export function XenditVaModal({
               }}
             >
               {cancelling ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}
-              Batal
+              Cancel
             </Button>
             {status === "PENDING" && process.env.NODE_ENV !== "production" && (
               <Button
@@ -177,7 +177,7 @@ export function XenditVaModal({
                   onSuccess()
                 }}
               >
-                Simulasi Sukses
+                Simulate Success
               </Button>
             )}
           </div>
@@ -190,16 +190,16 @@ export function XenditVaModal({
           setConfirmCancelOpen(false)
           setCancelling(true)
           try {
-            await onCancelOrder?.(`Dibatalkan oleh kasir dari layar ${methodName}`)
+            await onCancelOrder?.(`Cancelled by cashier from ${methodName} screen`)
           } finally {
             setCancelling(false)
           }
         }}
         type="danger"
-        title="Batalkan Pesanan?"
-        message="Pesanan ini akan dibatalkan secara permanen dan tercatat di sistem."
-        confirmText="Ya, Batalkan"
-        cancelText="Tutup"
+        title="Cancel Order?"
+        message="This order will be permanently cancelled and recorded in the system."
+        confirmText="Yes, Cancel"
+        cancelText="Close"
       />
     </Dialog>
   )

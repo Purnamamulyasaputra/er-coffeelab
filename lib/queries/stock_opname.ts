@@ -7,7 +7,7 @@ export async function getStockOpnames(branchId?: number) {
         so.id, 
         b.name as branch, 
         e.name as employee, 
-        to_char(so.created_at, 'Mon DD') as date,
+        to_char(so.created_at AT TIME ZONE 'Asia/Jakarta', 'DD-MM-YYYY') as date,
         (SELECT COUNT(id) FROM stock_opname_items WHERE stock_opname_id = so.id)::text as items,
         CASE 
           WHEN (SELECT COUNT(id) FROM stock_opname_items WHERE stock_opname_id = so.id AND difference != 0) = 0 THEN 'Match'
@@ -26,7 +26,7 @@ export async function getStockOpnames(branchId?: number) {
       so.id, 
       b.name as branch, 
       e.name as employee, 
-      to_char(so.created_at, 'Mon DD') as date,
+      to_char(so.created_at AT TIME ZONE 'Asia/Jakarta', 'DD-MM-YYYY') as date,
       (SELECT COUNT(id) FROM stock_opname_items WHERE stock_opname_id = so.id)::text as items,
       CASE 
         WHEN (SELECT COUNT(id) FROM stock_opname_items WHERE stock_opname_id = so.id AND difference != 0) = 0 THEN 'Match'
@@ -153,4 +153,14 @@ export async function completeStockOpname(opnameId: number) {
   }
 
   return true
+}
+
+export async function deleteStockOpname(id: number) {
+  const opname = await sql`SELECT status FROM stock_opnames WHERE id = ${id}`;
+  if (opname.length === 0) throw new Error("Opname not found");
+  if (opname[0].status === "COMPLETED") throw new Error("Cannot delete a completed stock opname");
+
+  await sql`DELETE FROM stock_opname_items WHERE stock_opname_id = ${id}`;
+  await sql`DELETE FROM stock_opnames WHERE id = ${id}`;
+  return true;
 }

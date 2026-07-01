@@ -8,13 +8,14 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Select } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
+import { Input } from "@/components/ui/input"
 import { useToast } from "@/components/ui/use-toast"
 import { useRouter } from "next/navigation"
 import { ConfirmationModal } from "@/components/ui/confirmation-modal"
 
 function formatMoney(amount: number | string | null) {
   if (amount === null || amount === undefined) return "-"
-  return "Rp " + Number(amount).toLocaleString("id-ID").replace(/,/g, '.')
+  return "Rp " + Math.round(Number(amount)).toLocaleString("id-ID")
 }
 
 export function AttendanceClient({
@@ -29,6 +30,20 @@ export function AttendanceClient({
 
   const [employeeId, setEmployeeId] = React.useState(employees[0]?.id?.toString() || "")
   const [branchId, setBranchId] = React.useState(branches[0]?.id?.toString() || "")
+
+  const [editId, setEditId] = React.useState<number | null>(null)
+  const [editDate, setEditDate] = React.useState("")
+  const [editTimeIn, setEditTimeIn] = React.useState("")
+  const [editTimeOut, setEditTimeOut] = React.useState("")
+  const [editOpen, setEditOpen] = React.useState(false)
+
+  const handleOpenEdit = (item: any) => {
+    setEditId(item.id)
+    setEditDate(item.date)
+    setEditTimeIn(item.in)
+    setEditTimeOut(item.out === '-' ? '' : item.out)
+    setEditOpen(true)
+  }
 
   const [deleteModalOpen, setDeleteModalOpen] = React.useState(false)
   const [attendanceToDelete, setAttendanceToDelete] = React.useState<any>(null)
@@ -45,7 +60,7 @@ export function AttendanceClient({
       header: "Actions",
       cell: (item: any) => (
         <div className="flex gap-1">
-          <Button size="icon" className="h-[34px] w-[34px] bg-[#2a2d4a] hover:bg-[#2a2d4a]/90 text-white rounded-[10px]"><Pencil size={14} /></Button>
+          <Button size="icon" className="h-[34px] w-[34px] bg-[#2a2d4a] hover:bg-[#2a2d4a]/90 text-white rounded-[10px]" onClick={() => handleOpenEdit(item)}><Pencil size={14} /></Button>
           <Button size="icon" className="h-[34px] w-[34px] bg-destructive hover:bg-destructive/90 text-white rounded-[10px]" onClick={() => { setAttendanceToDelete(item); setDeleteModalOpen(true); }}><Trash2 size={14} /></Button>
         </div>
       )
@@ -71,6 +86,32 @@ export function AttendanceClient({
 
       toast("Clock In recorded successfully!", "success")
       setOpen(false)
+      router.refresh()
+    } catch (e: any) {
+      toast(e.message, "error")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleEditSave = async () => {
+    if (!editId) return;
+    setLoading(true)
+    try {
+      const res = await fetch(`/api/attendance/${editId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          date: editDate,
+          timeIn: editTimeIn,
+          timeOut: editTimeOut || '-'
+        })
+      })
+
+      if (!res.ok) throw new Error("Failed to update attendance")
+
+      toast("Attendance updated successfully!", "success")
+      setEditOpen(false)
       router.refresh()
     } catch (e: any) {
       toast(e.message, "error")
@@ -126,20 +167,57 @@ export function AttendanceClient({
           </div>
         </div>
         <DialogFooter className="mt-4">
-          <Button 
-            variant="secondary" 
-            onClick={() => setOpen(false)} 
-            disabled={loading} 
+          <Button
+            variant="secondary"
+            onClick={() => setOpen(false)}
+            disabled={loading}
             className="bg-slate-600 hover:bg-slate-700 text-white border-0 font-medium px-6"
           >
             Cancel
           </Button>
-          <Button 
-            className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-6 disabled:opacity-50 disabled:cursor-not-allowed" 
-            onClick={handleSave} 
+          <Button
+            className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-6 disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={handleSave}
             disabled={loading || !employeeId || (branches.length > 1 && !branchId)}
           >
             <Check size={16} /> {loading ? "Saving..." : "Clock In"}
+          </Button>
+        </DialogFooter>
+      </Dialog>
+
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogHeader>
+          <DialogTitle>Edit Attendance</DialogTitle>
+        </DialogHeader>
+        <div className="flex flex-col gap-3 py-2 px-1">
+          <div className="flex flex-col gap-1.5">
+            <Label>Date (DD-MM-YYYY)</Label>
+            <Input value={editDate} onChange={e => setEditDate(e.target.value)} placeholder="DD-MM-YYYY" />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label>Time In (HH:mm)</Label>
+            <Input value={editTimeIn} onChange={e => setEditTimeIn(e.target.value)} placeholder="08:00" />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label>Time Out (HH:mm)</Label>
+            <Input value={editTimeOut} onChange={e => setEditTimeOut(e.target.value)} placeholder="17:00" />
+          </div>
+        </div>
+        <DialogFooter className="mt-4">
+          <Button
+            variant="secondary"
+            onClick={() => setEditOpen(false)}
+            disabled={loading}
+            className="bg-slate-600 hover:bg-slate-700 text-white border-0 font-medium px-6"
+          >
+            Cancel
+          </Button>
+          <Button
+            className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-6 disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={handleEditSave}
+            disabled={loading || !editDate || !editTimeIn}
+          >
+            <Check size={16} /> {loading ? "Saving..." : "Save Changes"}
           </Button>
         </DialogFooter>
       </Dialog>
@@ -149,7 +227,7 @@ export function AttendanceClient({
         onClose={() => setDeleteModalOpen(false)}
         onConfirm={confirmDelete}
         title="Delete Attendance Record"
-        message={<>Are you sure you want to delete the attendance record for <span className="font-bold text-white">{attendanceToDelete?.emp}</span> on <span className="font-bold text-white">{attendanceToDelete?.date}</span>? This action cannot be undone.</>}
+        message={<>Are you sure you want to delete the attendance record?</>}
         confirmText={loading ? "Deleting..." : "Delete"}
         type="danger"
       />

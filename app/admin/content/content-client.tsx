@@ -1,13 +1,14 @@
 "use client"
 
 import * as React from "react"
-import { Plus, Pencil, Trash2, X, GripVertical } from "lucide-react"
+import { Plus, Pencil, Trash2, X, GripVertical, Bold, Italic, Underline, Heading1, Heading2, List, Link as LinkIcon, Code } from "lucide-react"
 import { PageHeader } from "@/components/shared/page-header"
 import { DataTable } from "@/components/shared/data-table"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { useRouter } from "next/navigation"
 import { ConfirmationModal } from "@/components/ui/confirmation-modal"
+import { useToast } from "@/components/ui/use-toast"
 
 export function ContentClient({ initialStaticPages, initialMerchandise }: { initialStaticPages: any[], initialMerchandise: any[] }) {
   const router = useRouter()
@@ -23,6 +24,8 @@ export function ContentClient({ initialStaticPages, initialMerchandise }: { init
   const [editingId, setEditingId] = React.useState<number | null>(null)
   const [loading, setLoading] = React.useState(false)
   const [deleteConfirmInfo, setDeleteConfirmInfo] = React.useState<{id: number, type: 'page'|'merch'} | null>(null)
+  const [uploadingImage, setUploadingImage] = React.useState(false)
+  const { toast } = useToast()
 
   React.useEffect(() => {
     setPagesData(initialStaticPages)
@@ -69,6 +72,26 @@ export function ContentClient({ initialStaticPages, initialMerchandise }: { init
     }
   }
 
+  // Toolbar Insert HTML
+  const insertTag = (openTag: string, closeTag: string) => {
+    const textarea = document.getElementById("content-editor") as HTMLTextAreaElement
+    if (!textarea) return
+    const start = textarea.selectionStart
+    const end = textarea.selectionEnd
+    const text = pageForm.content
+    const before = text.substring(0, start)
+    const selected = text.substring(start, end)
+    const after = text.substring(end)
+    
+    const newText = before + openTag + selected + closeTag + after
+    setPageForm(prev => ({ ...prev, content: newText }))
+    
+    setTimeout(() => {
+      textarea.focus()
+      textarea.setSelectionRange(start + openTag.length, end + openTag.length)
+    }, 10)
+  }
+
   // === MERCHANDISE ===
   const handleOpenAddMerch = () => {
     setEditingId(null)
@@ -85,6 +108,37 @@ export function ContentClient({ initialStaticPages, initialMerchandise }: { init
       personalizable: item.personalizable, badge: item.badge || "", status: item.status, sort_order: item.sort_order || 0
     })
     setIsMerchModalOpen(true)
+  }
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    if (file.size > 2 * 1024 * 1024) {
+      toast("File size exceeds 2MB limit.", "error")
+      return
+    }
+
+    setUploadingImage(true)
+    try {
+      const form = new FormData()
+      form.append('file', file)
+
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: form
+      })
+      if (!res.ok) throw new Error("Upload failed")
+      
+      const blob = await res.json()
+      setMerchForm(prev => ({ ...prev, image_url: blob.url }))
+      toast("Image uploaded successfully", "success")
+    } catch (err) {
+      console.error(err)
+      toast("Failed to upload image", "error")
+    } finally {
+      setUploadingImage(false)
+    }
   }
 
   const handleSubmitMerch = async (e: React.FormEvent) => {
@@ -156,7 +210,7 @@ export function ContentClient({ initialStaticPages, initialMerchandise }: { init
       cell: (item: any) => (
         <div className="w-8 h-8 rounded-md bg-white p-1 flex items-center justify-center">
           {item.image_url ? (
-            <img src={item.image_url} alt={item.name} className="max-w-full max-h-full object-contain" />
+            <img src={`/api/image?url=${encodeURIComponent(item.image_url)}`} alt={item.name} className="max-w-full max-h-full object-contain" />
           ) : (
             <div className="text-[10px] text-gray-400">N/A</div>
           )}
@@ -248,13 +302,24 @@ export function ContentClient({ initialStaticPages, initialMerchandise }: { init
                   <input required value={pageForm.slug} onChange={e => setPageForm({ ...pageForm, slug: e.target.value })} className="w-full bg-muted border border-border rounded-lg px-3.5 py-2.5 text-foreground text-[13px] outline-none focus:border-brand-blue" placeholder="e.g. terms-conditions" />
                 </div>
               </div>
-              <div>
-                <label className="block text-[12px] font-medium text-muted-foreground mb-1.5">Content (HTML)</label>
-                <textarea required value={pageForm.content} onChange={e => setPageForm({ ...pageForm, content: e.target.value })} rows={10} className="w-full bg-muted border border-border rounded-lg px-3.5 py-2.5 text-foreground text-[13px] font-mono leading-relaxed outline-none focus:border-brand-blue" placeholder="<h1>Title</h1><p>Content here...</p>" />
+              <div className="flex flex-col border border-border rounded-lg overflow-hidden focus-within:border-brand-blue transition-colors">
+                <div className="flex items-center gap-1 bg-muted px-3 py-2 border-b border-border">
+                  <button type="button" onClick={() => insertTag('<b>', '</b>')} className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-background rounded-md transition-colors" title="Bold"><Bold size={14} /></button>
+                  <button type="button" onClick={() => insertTag('<i>', '</i>')} className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-background rounded-md transition-colors" title="Italic"><Italic size={14} /></button>
+                  <button type="button" onClick={() => insertTag('<u>', '</u>')} className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-background rounded-md transition-colors" title="Underline"><Underline size={14} /></button>
+                  <div className="w-px h-4 bg-border mx-1" />
+                  <button type="button" onClick={() => insertTag('<h1>', '</h1>')} className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-background rounded-md transition-colors" title="Heading 1"><Heading1 size={14} /></button>
+                  <button type="button" onClick={() => insertTag('<h2>', '</h2>')} className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-background rounded-md transition-colors" title="Heading 2"><Heading2 size={14} /></button>
+                  <div className="w-px h-4 bg-border mx-1" />
+                  <button type="button" onClick={() => insertTag('<ul>\n  <li>', '</li>\n</ul>')} className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-background rounded-md transition-colors" title="Bullet List"><List size={14} /></button>
+                  <button type="button" onClick={() => insertTag('<a href="#">', '</a>')} className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-background rounded-md transition-colors" title="Insert Link"><LinkIcon size={14} /></button>
+                  <div className="ml-auto text-[10px] text-muted-foreground font-medium flex items-center gap-1"><Code size={12} /> HTML Editor</div>
+                </div>
+                <textarea id="content-editor" required value={pageForm.content} onChange={e => setPageForm({ ...pageForm, content: e.target.value })} rows={12} className="w-full bg-background px-4 py-3 text-foreground text-[13px] font-mono leading-relaxed outline-none resize-y placeholder:text-muted-foreground/40" placeholder="<h1>Welcome</h1><p>Start writing your content here...</p>" />
               </div>
               <div className="flex justify-end gap-2.5 mt-2">
-                <Button type="button" variant="ghost" onClick={() => setIsPageModalOpen(false)} className="bg-muted text-foreground hover:bg-muted/80 px-5 py-2 h-auto rounded-lg text-[12px] font-semibold border border-border">Cancel</Button>
-                <Button type="submit" disabled={loading} className="bg-primary text-white hover:bg-primary/80 px-5 py-2 h-auto rounded-lg text-[12px] font-semibold">{loading ? 'Saving...' : '✓ Save'}</Button>
+                <Button type="button" variant="ghost" onClick={() => setIsPageModalOpen(false)} className="bg-muted text-foreground hover:bg-muted/80 px-6 py-2 h-10 rounded-lg text-[13px] font-semibold border border-border">Cancel</Button>
+                <Button type="submit" disabled={loading} className="bg-primary text-white hover:bg-primary/80 px-6 py-2 h-10 rounded-lg text-[13px] font-bold shadow-md shadow-brand-blue/20">{loading ? 'Saving...' : 'Save Page'}</Button>
               </div>
             </form>
           </div>
@@ -281,8 +346,24 @@ export function ContentClient({ initialStaticPages, initialMerchandise }: { init
                 </div>
               </div>
               <div>
-                <label className="block text-[12px] font-medium text-muted-foreground mb-1.5">Image URL</label>
-                <input value={merchForm.image_url} onChange={e => setMerchForm({ ...merchForm, image_url: e.target.value })} className="w-full bg-muted border border-border rounded-lg px-3.5 py-2.5 text-foreground text-[13px] outline-none focus:border-brand-blue" placeholder="https://..." />
+                <label className="block text-[12px] font-medium text-muted-foreground mb-1.5">Image (Max 2MB)</label>
+                <div className="flex items-center gap-3">
+                  {merchForm.image_url && (
+                    <div className="w-12 h-10 rounded-md border border-border bg-muted flex items-center justify-center overflow-hidden flex-shrink-0">
+                      <img src={`/api/image?url=${encodeURIComponent(merchForm.image_url)}`} alt="Preview" className="max-w-full max-h-full object-contain p-1" />
+                    </div>
+                  )}
+                  <div className="flex-1">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      disabled={uploadingImage}
+                      onChange={handleImageUpload}
+                      className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-foreground focus:outline-none focus:border-brand-blue transition-colors text-[12px] file:mr-3 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-[11px] file:font-semibold file:bg-brand-blue/10 file:text-brand-blue hover:file:bg-brand-blue/20"
+                    />
+                    {uploadingImage && <p className="text-[10px] text-brand-blue mt-1">Uploading...</p>}
+                  </div>
+                </div>
               </div>
               <div>
                 <label className="block text-[12px] font-medium text-muted-foreground mb-1.5">Description</label>

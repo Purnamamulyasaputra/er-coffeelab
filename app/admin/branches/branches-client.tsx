@@ -170,11 +170,11 @@ export function BranchesClient({ initialData, role }: { initialData: any[], role
   const columns = [
     { header: "No", cell: (_: unknown, index: number) => index + 1 },
     { header: "Name", accessorKey: "name" as const },
-    { 
-      header: "POS Key", 
+    {
+      header: "POS Key",
       cell: (item: any) => (
         <Badge variant="cool" className="font-mono text-[11px] tracking-widest">{item.pos_key || '-'}</Badge>
-      ) 
+      )
     },
     {
       header: "Status",
@@ -184,23 +184,23 @@ export function BranchesClient({ initialData, role }: { initialData: any[], role
         </Badge>
       )
     },
-    { 
-      header: "Pickup", 
-      cell: (item: any) => role === "STORE_ADMIN" ? 
-        <Switch checked={item.pickup_enabled} onChange={(e: any) => handleToggleFeature(item, 'pickup_enabled', e.target.checked)} /> 
-        : (item.pickup_enabled ? "Yes" : "No") 
+    {
+      header: "Pickup",
+      cell: (item: any) => role === "STORE_ADMIN" ?
+        <Switch checked={item.pickup_enabled} onChange={(e: any) => handleToggleFeature(item, 'pickup_enabled', e.target.checked)} />
+        : (item.pickup_enabled ? "Yes" : "No")
     },
-    { 
-      header: "Delivery", 
-      cell: (item: any) => role === "STORE_ADMIN" ? 
-        <Switch checked={item.delivery_enabled} onChange={(e: any) => handleToggleFeature(item, 'delivery_enabled', e.target.checked)} /> 
-        : (item.delivery_enabled ? "Yes" : "No") 
+    {
+      header: "Delivery",
+      cell: (item: any) => role === "STORE_ADMIN" ?
+        <Switch checked={item.delivery_enabled} onChange={(e: any) => handleToggleFeature(item, 'delivery_enabled', e.target.checked)} />
+        : (item.delivery_enabled ? "Yes" : "No")
     },
-    { 
-      header: "Dine-In", 
-      cell: (item: any) => role === "STORE_ADMIN" ? 
-        <Switch checked={item.dinein_enabled} onChange={(e: any) => handleToggleFeature(item, 'dinein_enabled', e.target.checked)} /> 
-        : (item.dinein_enabled ? "Yes" : "No") 
+    {
+      header: "Dine-In",
+      cell: (item: any) => role === "STORE_ADMIN" ?
+        <Switch checked={item.dinein_enabled} onChange={(e: any) => handleToggleFeature(item, 'dinein_enabled', e.target.checked)} />
+        : (item.dinein_enabled ? "Yes" : "No")
     },
     { header: "Tax", cell: (item: any) => `${item.tax_rate}%` },
     { header: "Svc Charge", cell: (item: any) => `${item.service_charge_pct}%` },
@@ -444,17 +444,17 @@ export function BranchesClient({ initialData, role }: { initialData: any[], role
 
         </div>
         <DialogFooter className="mt-4">
-          <Button 
-            variant="secondary" 
-            onClick={() => setOpen(false)} 
-            disabled={loading} 
+          <Button
+            variant="secondary"
+            onClick={() => setOpen(false)}
+            disabled={loading}
             className="bg-slate-600 hover:bg-slate-700 text-white border-0 font-medium px-6"
           >
             Cancel
           </Button>
-          <Button 
-            className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-6 disabled:opacity-50 disabled:cursor-not-allowed" 
-            onClick={handleSave} 
+          <Button
+            className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-6 disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={handleSave}
             disabled={loading || !name || !address}
           >
             <Check size={16} /> {loading ? "Saving..." : "Save"}
@@ -462,13 +462,13 @@ export function BranchesClient({ initialData, role }: { initialData: any[], role
         </DialogFooter>
       </Dialog>
 
-      <ConfirmationModal 
+      <ConfirmationModal
         isOpen={deleteConfirmOpen}
         onClose={() => setDeleteConfirmOpen(false)}
         onConfirm={confirmDelete}
         type="danger"
         title="Delete Branch"
-        message={<>Are you sure you want to delete <span className="font-bold text-white">{branchToDelete?.name}</span>? This action cannot be undone.</>}
+        message={<>Are you sure you want to delete this branch?</>}
         confirmText={loading ? "Deleting..." : "Delete"}
       />
     </div>

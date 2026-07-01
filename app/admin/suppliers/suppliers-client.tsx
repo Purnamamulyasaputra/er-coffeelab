@@ -176,7 +176,7 @@ export function SuppliersClient({ initialData }: { initialData: any[] }) {
         onClose={() => setDeleteModalOpen(false)}
         type="danger"
         title="Delete Supplier"
-        message="Data supplier yang dihapus tidak dapat dikembalikan."
+        message="Are you sure you want to delete?"
         onConfirm={handleDelete}
         confirmText={loading ? "Deleting..." : "Delete"}
       />

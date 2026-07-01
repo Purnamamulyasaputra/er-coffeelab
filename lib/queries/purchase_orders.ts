@@ -10,7 +10,7 @@ export async function getPurchaseOrders(branchId?: number) {
         po.total_amount as total, 
         po.status, 
         COALESCE(a.name, e.name, 'System') as by, 
-        to_char(po.created_at, 'Mon DD') as date 
+        to_char(po.created_at AT TIME ZONE 'Asia/Jakarta', 'DD-MM-YYYY') as date 
       FROM purchase_orders po
       LEFT JOIN suppliers s ON po.supplier_id = s.id
       LEFT JOIN branches b ON po.branch_id = b.id
@@ -28,7 +28,7 @@ export async function getPurchaseOrders(branchId?: number) {
       po.total_amount as total, 
       po.status, 
       COALESCE(a.name, e.name, 'System') as by, 
-      to_char(po.created_at, 'Mon DD') as date 
+      to_char(po.created_at AT TIME ZONE 'Asia/Jakarta', 'DD-MM-YYYY') as date 
     FROM purchase_orders po
     LEFT JOIN suppliers s ON po.supplier_id = s.id
     LEFT JOIN branches b ON po.branch_id = b.id

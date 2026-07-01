@@ -74,9 +74,9 @@ export function XenditQrisModal({
           {logoUrl && (
             <img src={logoUrl} alt="QRIS" className="h-10 object-contain" />
           )}
-          <DialogTitle className="text-center">Bayar dengan QRIS</DialogTitle>
+          <DialogTitle className="text-center">Pay with QRIS</DialogTitle>
           <DialogDescription className="text-center">
-            Scan QR Code di bawah dengan aplikasi e-wallet atau mobile banking Anda
+            Scan the QR Code below with your e-wallet or mobile banking app
           </DialogDescription>
         </DialogHeader>
 
@@ -102,14 +102,14 @@ export function XenditQrisModal({
           {status === "FAILED" && (
             <div className="w-64 h-64 flex flex-col items-center justify-center bg-destructive/10 rounded-xl text-destructive">
               <XCircle className="w-16 h-16 mb-4" />
-              <div className="font-semibold text-lg">Pembayaran Gagal</div>
+              <div className="font-semibold text-lg">Payment Failed</div>
             </div>
           )}
 
           {status === "PENDING" && (
             <div className="flex items-center gap-2 text-muted-foreground">
               <Loader2 className="w-4 h-4 animate-spin" />
-              <span className="text-sm">Menunggu pembayaran...</span>
+              <span className="text-sm">Waiting for payment...</span>
             </div>
           )}
         </div>
@@ -128,13 +128,13 @@ export function XenditQrisModal({
             }}
           >
             {cancelling ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}
-            Batal
+            Cancel
           </Button>
           {status === "PENDING" && (
             <Button variant="default" className="flex-1 rounded-lg" onClick={() => {
               onSuccess()
             }}>
-              Simulasi Sukses
+              Simulate Success
             </Button>
           )}
         </div>
@@ -142,20 +142,20 @@ export function XenditQrisModal({
       <ConfirmationModal
         isOpen={confirmCancelOpen}
         onClose={() => setConfirmCancelOpen(false)}
-        message="Apakah Anda yakin ingin membatalkan pesanan ini?"
+        message="Are you sure you want to cancel this order?"
         onConfirm={async () => {
           setConfirmCancelOpen(false)
           setCancelling(true)
           try {
-            await onCancelOrder?.("Dibatalkan oleh kasir dari layar QRIS")
+            await onCancelOrder?.("Cancelled by cashier from QRIS screen")
           } finally {
             setCancelling(false)
           }
         }}
         type="danger"
-        title="Batalkan Pesanan?"
-        confirmText="Batalkan"
-        cancelText="Tutup"
+        title="Cancel Order?"
+        confirmText="Cancel"
+        cancelText="Close"
       />
     </Dialog>
   )

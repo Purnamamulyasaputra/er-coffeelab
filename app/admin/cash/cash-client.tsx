@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/shared/page-header"
 import { DataTable } from "@/components/shared/data-table"
 import { Badge } from "@/components/ui/badge"
 
-import { Plus, Pencil, Trash2, Check } from "lucide-react"
+import { Plus, Pencil, Trash2, Check, Eye } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
@@ -19,14 +19,14 @@ function formatMoney(amount: number | string) {
   return "IDR " + Number(amount).toLocaleString("id-ID").replace(/,/g, '.')
 }
 
-export function CashClient({ 
-  initialData, 
-  activeShift, 
-  isAdmin, 
+export function CashClient({
+  initialData,
+  activeShift,
+  isAdmin,
   showBranchColumn,
   loggedInEmployeeId
-}: { 
-  initialData: any[], 
+}: {
+  initialData: any[],
   activeShift?: any,
   isAdmin?: boolean,
   showBranchColumn?: boolean,
@@ -39,7 +39,10 @@ export function CashClient({
   const [loading, setLoading] = React.useState(false)
   const [deleteModalOpen, setDeleteModalOpen] = React.useState(false)
   const [deleteId, setDeleteId] = React.useState<number | null>(null)
-  
+
+  const [viewModalOpen, setViewModalOpen] = React.useState(false)
+  const [viewData, setViewData] = React.useState<any>(null)
+
   const { toast } = useToast()
   const router = useRouter()
 
@@ -97,10 +100,10 @@ export function CashClient({
 
   const columns = [
     { header: "No", cell: (_: unknown, index: number) => index + 1 },
-    { header: "Employee", accessorKey: "employee" as const },
-    ...(showBranchColumn ? [{ header: "Branch", accessorKey: "branch" as const }] : []),
-    { 
-      header: "Type", 
+    { header: "Employee", cell: (item: any) => <div className="whitespace-nowrap">{item.employee}</div> },
+    ...(showBranchColumn ? [{ header: "Branch", cell: (item: any) => <div className="whitespace-nowrap">{item.branch}</div> }] : []),
+    {
+      header: "Type",
       cell: (item: any) => (
         <Badge variant={item.type === "IN" ? "success" : "destructive"}>
           {item.type}
@@ -108,33 +111,38 @@ export function CashClient({
       )
     },
     { header: "Amount", cell: (item: any) => formatMoney(item.amount) },
-    { 
-      header: "Reason", 
+    {
+      header: "Reason",
       cell: (item: any) => (
         <div className="max-w-[150px] sm:max-w-[200px] md:max-w-[250px] truncate" title={item.reason}>
           {item.reason}
         </div>
       )
     },
-    { header: "Date", accessorKey: "date" as const },
-    { header: "Time", accessorKey: "time" as const },
-    ...(isAdmin ? [{
+    { header: "Date", cell: (item: any) => <div className="whitespace-nowrap">{item.date}</div> },
+    { header: "Time", cell: (item: any) => <div className="whitespace-nowrap">{item.time}</div> },
+    {
       header: "Actions",
       cell: (item: any) => (
         <div className="flex gap-1">
-          <Button size="icon" className="h-[34px] w-[34px] bg-destructive hover:bg-destructive/90 text-white rounded-[10px]" onClick={() => { setDeleteId(item.id); setDeleteModalOpen(true); }}>
-            <Trash2 size={14} />
+          <Button size="icon" className="h-[34px] w-[34px] bg-[#2a2d4a] hover:bg-[#2a2d4a]/90 text-white rounded-[10px]" onClick={() => { setViewData(item); setViewModalOpen(true); }}>
+            <Eye size={14} />
           </Button>
+          {isAdmin && (
+            <Button size="icon" className="h-[34px] w-[34px] bg-destructive hover:bg-destructive/90 text-white rounded-[10px]" onClick={() => { setDeleteId(item.id); setDeleteModalOpen(true); }}>
+              <Trash2 size={14} />
+            </Button>
+          )}
         </div>
       )
-    }] : [])
+    }
   ]
 
   return (
     <div>
-      <PageHeader 
-        title="Cash Management" 
-        description="Petty cash movements and till adjustments" 
+      <PageHeader
+        title="Cash Management"
+        description="Petty cash movements and till adjustments"
         action={
           <Button onClick={() => {
             if (!activeShift) {
@@ -149,7 +157,7 @@ export function CashClient({
           </Button>
         }
       />
-      <DataTable 
+      <DataTable
         data={initialData}
         columns={columns}
         keyExtractor={item => item.id}
@@ -162,11 +170,11 @@ export function CashClient({
         <div className="flex flex-col gap-3 py-2 overflow-y-auto px-1 max-h-[80vh]">
           <div className="flex flex-col gap-1.5">
             <Label>Type</Label>
-            <Select 
+            <Select
               options={[
-                {label: "IN (Uang Masuk)", value: "IN"},
-                {label: "OUT (Uang Keluar)", value: "OUT"}
-              ]} 
+                { label: "IN (Uang Masuk)", value: "IN" },
+                { label: "OUT (Uang Keluar)", value: "OUT" }
+              ]}
               value={type}
               onChange={(e) => setType(e.target.value)}
             />
@@ -186,8 +194,8 @@ export function CashClient({
           </div>
           <div className="flex flex-col gap-1.5">
             <Label>Reason</Label>
-            <Input 
-              placeholder="Reason for movement (e.g. Beli es batu)" 
+            <Input
+              placeholder="Reason for movement (e.g. Beli es batu)"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
             />
@@ -205,11 +213,52 @@ export function CashClient({
         isOpen={deleteModalOpen}
         onClose={() => setDeleteModalOpen(false)}
         type="danger"
-        title="Hapus Catatan Kas"
-        message="Apakah Anda yakin ingin menghapus catatan pergerakan kas ini? Saldo akhir shift akan otomatis diperbarui. Tindakan ini tidak dapat dibatalkan."
+        title="Delete Cash Movement"
+        message="Are you sure you want to delete this cash movement?"
         onConfirm={handleDelete}
-        confirmText={loading ? "Menghapus..." : "Hapus"}
+        confirmText={loading ? "Deleting..." : "Delete"}
       />
+
+      <Dialog open={viewModalOpen} onOpenChange={setViewModalOpen}>
+        <DialogHeader>
+          <DialogTitle>Detail Pergerakan Kas</DialogTitle>
+        </DialogHeader>
+        {viewData && (
+          <div className="flex flex-col gap-4 py-4 px-2">
+            <div className="grid grid-cols-2 gap-5">
+              <div className="flex flex-col gap-1.5">
+                <span className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Employee</span>
+                <span className="font-medium text-[15px]">{viewData.employee}</span>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <span className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Date & Time</span>
+                <span className="font-medium text-[15px]">{viewData.date} {viewData.time}</span>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <span className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Type</span>
+                <div>
+                  <Badge variant={viewData.type === "IN" ? "success" : "destructive"} className="px-3 py-1">
+                    {viewData.type}
+                  </Badge>
+                </div>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <span className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Amount</span>
+                <span className="font-bold text-[16px]">{formatMoney(viewData.amount)}</span>
+              </div>
+            </div>
+            <div className="flex flex-col gap-1.5 mt-2">
+              <span className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Reason</span>
+              <div className="p-4 bg-muted/60 rounded-lg border border-border/60 text-[14px] leading-relaxed whitespace-pre-wrap shadow-sm max-h-[150px] overflow-y-auto custom-scrollbar">
+                {viewData.reason}
+              </div>
+            </div>
+          </div>
+        )}
+        <DialogFooter>
+          <Button onClick={() => setViewModalOpen(false)} className="w-full sm:w-auto font-semibold px-8">Close</Button>
+        </DialogFooter>
+      </Dialog>
     </div>
   )
 }

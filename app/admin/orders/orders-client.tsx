@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { RefreshCw, Volume2, Pencil, Trash2, X, Clock, MapPin, Phone, User, CheckCircle2, Monitor, ShoppingBag, CreditCard, Ban, Printer, Users, FileText, Check, Eye, Copy } from "lucide-react"
+import { RefreshCw, Volume2, Pencil, Trash2, X, Clock, MapPin, Phone, User, CheckCircle2, Monitor, ShoppingBag, CreditCard, Ban, Printer, Users, FileText, Check, Eye, Copy, ChefHat } from "lucide-react"
 import { jsPDF } from "jspdf"
 import html2canvas from "html2canvas"
 import { ReceiptPrint } from "@/components/pos/receipt-print"
@@ -91,7 +91,7 @@ function OrderDetailDrawer({ orderId, onClose, onStatusUpdate, role }: { orderId
       toast(`Order #${orderId} marked as ${newStatus}`, "success")
 
       // Update local details optimistically
-      setDetails({ ...details, status: newStatus })
+      setDetails({ ...details, status: newStatus, ...(newStatus === 'PAID' ? { paid_at: new Date().toISOString() } : {}) })
       onStatusUpdate() // notify parent to refresh table
     } catch (e) {
       toast("Failed to update status", "error")
@@ -262,17 +262,41 @@ function OrderDetailDrawer({ orderId, onClose, onStatusUpdate, role }: { orderId
                           <Badge variant={getStatusVariant(details.status)} className="text-[11px] px-2.5 py-0.5 h-6">
                             {details.status}
                           </Badge>
-                          {role !== "STORE_ADMIN" && role !== "EMPLOYEE" && (
-                            <select
-                              className="bg-card border border-input rounded-md px-2 py-1.5 text-xs font-medium outline-none cursor-pointer disabled:opacity-50 w-full mt-1"
-                              value={details.status}
+                          {details.status === 'PAID' && (
+                            <Button
+                              variant="default"
+                              size="sm"
+                              className="text-[10px] h-7 px-2.5 gap-1.5 bg-amber-600 hover:bg-amber-700 text-white w-full max-w-[120px] justify-start"
+                              onClick={() => handleUpdateStatus('PROCESSING')}
                               disabled={updating}
-                              onChange={(e) => handleUpdateStatus(e.target.value)}
                             >
-                              {STATUS_OPTIONS.map(s => (
-                                <option key={s} value={s}>{formatStatus(s)}</option>
-                              ))}
-                            </select>
+                              {updating ? <RefreshCw className="w-3 h-3 animate-spin" /> : <ChefHat className="w-3 h-3" />}
+                              <span>Proses Pesanan</span>
+                            </Button>
+                          )}
+                          {details.status === 'PROCESSING' && (
+                            <Button
+                              variant="default"
+                              size="sm"
+                              className="text-[10px] h-7 px-2.5 gap-1.5 bg-blue-600 hover:bg-blue-700 text-white w-full max-w-[120px] justify-start"
+                              onClick={() => handleUpdateStatus('READY')}
+                              disabled={updating}
+                            >
+                              {updating ? <RefreshCw className="w-3 h-3 animate-spin" /> : <CheckCircle2 className="w-3 h-3" />}
+                              <span>Pesanan Siap</span>
+                            </Button>
+                          )}
+                          {details.status === 'READY' && (
+                            <Button
+                              variant="default"
+                              size="sm"
+                              className="text-[10px] h-7 px-2.5 gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white w-full max-w-[120px] justify-start"
+                              onClick={() => handleUpdateStatus('COMPLETED')}
+                              disabled={updating}
+                            >
+                              {updating ? <RefreshCw className="w-3 h-3 animate-spin" /> : <CheckCircle2 className="w-3 h-3" />}
+                              <span>Selesaikan</span>
+                            </Button>
                           )}
                         </div>
                       </div>
@@ -292,14 +316,25 @@ function OrderDetailDrawer({ orderId, onClose, onStatusUpdate, role }: { orderId
                       {(!details.paid_at && details.status !== 'CANCELLED') && (
                         <div className="space-y-2">
                           <div className="text-[10px] font-bold text-foreground/70 uppercase tracking-wider text-center">Actions</div>
-                          <div className="flex gap-2 justify-end">
-                            {(!details.paid_at && details.status !== 'CANCELLED') && (
+                          <div className="flex gap-2 justify-end flex-wrap">
+                            {details.order_mode === 'DINE_IN' ? (
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                className="text-[10px] h-7 px-2.5 gap-1.5 opacity-80 cursor-not-allowed"
+                                disabled
+                                title="Pembayaran Dine-In harus dilakukan dari menu Tables (Manajemen Meja)"
+                              >
+                                <CreditCard className="w-3 h-3 text-muted-foreground" />
+                                <span className="text-muted-foreground">Bayar di Meja</span>
+                              </Button>
+                            ) : (
                               <Button
                                 variant="default"
                                 size="sm"
                                 className="text-[10px] h-7 px-2.5 gap-1.5 bg-blue-950 hover:bg-blue-900 text-white"
                                 onClick={handleOpenPaymentModal}
-                                disabled={loadingPayment}
+                                disabled={loadingPayment || updating}
                               >
                                 {loadingPayment ? (
                                   <RefreshCw className="w-3 h-3 animate-spin" />
@@ -309,7 +344,7 @@ function OrderDetailDrawer({ orderId, onClose, onStatusUpdate, role }: { orderId
                                 <span>Bayar</span>
                               </Button>
                             )}
-                            {['PENDING', 'PROCESSING', 'NEW'].includes(details.status) && !details.paid_at && (
+                            {['PENDING', 'NEW'].includes(details.status) && (
                               <Button
                                 variant="destructive"
                                 size="sm"
@@ -319,6 +354,7 @@ function OrderDetailDrawer({ orderId, onClose, onStatusUpdate, role }: { orderId
                                   setCancelReason("");
                                   setCancelModalOpen(true);
                                 }}
+                                disabled={updating}
                               >
                                 <Ban className="w-3 h-3" />
                                 <span>Batal</span>

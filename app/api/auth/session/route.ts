@@ -15,7 +15,12 @@ export async function GET(request: NextRequest) {
         dineinEnabled = branchData[0].dinein_enabled;
       }
       
-      const activeShifts = await sql`SELECT id FROM shifts WHERE branch_id = ${session.resolvedBranchId} AND status = 'OPEN' LIMIT 1`;
+      let activeShifts;
+      if (session.role === 'EMPLOYEE' && session.employeeId) {
+        activeShifts = await sql`SELECT id FROM shifts WHERE branch_id = ${session.resolvedBranchId} AND employee_id = ${session.employeeId} AND status = 'OPEN' LIMIT 1`;
+      } else {
+        activeShifts = await sql`SELECT id FROM shifts WHERE branch_id = ${session.resolvedBranchId} AND status = 'OPEN' LIMIT 1`;
+      }
       hasActiveShift = activeShifts.length > 0;
     }
 

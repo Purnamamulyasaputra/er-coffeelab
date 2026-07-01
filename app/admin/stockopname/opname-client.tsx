@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Plus, Pencil, Trash2, Check } from "lucide-react"
+import { Plus, Pencil, Trash2, Check, Eye } from "lucide-react"
 import { PageHeader } from "@/components/shared/page-header"
 import { DataTable } from "@/components/shared/data-table"
 import { Button } from "@/components/ui/button"
@@ -12,11 +12,12 @@ import { Select } from "@/components/ui/select"
 import { useToast } from "@/components/ui/use-toast"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import { ConfirmationModal } from "@/components/ui/confirmation-modal"
 
 export function StockOpnameClient({ 
-  initialData, employees, branches, currentBranchId 
+  initialData, employees, branches, currentBranchId, role 
 }: { 
-  initialData: any[], employees: any[], branches: any[], currentBranchId?: number 
+  initialData: any[], employees: any[], branches: any[], currentBranchId?: number, role?: string 
 }) {
   const [open, setOpen] = React.useState(false)
   const [loading, setLoading] = React.useState(false)
@@ -26,17 +27,20 @@ export function StockOpnameClient({
   const [employeeId, setEmployeeId] = React.useState(employees[0]?.id?.toString() || "")
   const [branchId, setBranchId] = React.useState(currentBranchId ? currentBranchId.toString() : (branches[0]?.id?.toString() || ""))
 
+  const [deleteModalOpen, setDeleteModalOpen] = React.useState(false)
+  const [opnameToDelete, setOpnameToDelete] = React.useState<any>(null)
+
   const columns = [
-    { header: "No", accessorKey: "id" as const },
+    { header: "No", cell: (_: unknown, index: number) => index + 1 },
     { header: "Branch", accessorKey: "branch" as const },
     { header: "Employee", accessorKey: "employee" as const },
-    { header: "Date", accessorKey: "date" as const },
+    { header: "Date", cell: (item: any) => <span className="whitespace-nowrap">{item.date}</span> },
     { header: "Items", accessorKey: "items" as const },
     { header: "Variance", accessorKey: "variance" as const },
     { 
       header: "Status", 
       cell: (item: any) => (
-        <Badge variant={item.status === "COMPLETED" ? "success" : item.status === "DRAFT" ? "warning" : "secondary"}>
+        <Badge variant={item.status === "COMPLETED" ? "success" : (item.status === "IN_PROGRESS" || item.status === "DRAFT") ? "warning" : "secondary"}>
           {item.status}
         </Badge>
       )
@@ -47,10 +51,12 @@ export function StockOpnameClient({
         <div className="flex gap-1">
           <Link href={`/admin/stockopname/${item.id}`}>
             <Button size="icon" className="h-[34px] w-[34px] bg-[#2a2d4a] hover:bg-[#2a2d4a]/90 text-white rounded-[10px]">
-              <Pencil size={14} />
+              {item.status === "COMPLETED" ? <Eye size={14} /> : <Pencil size={14} />}
             </Button>
           </Link>
-          <Button size="icon" className="h-[34px] w-[34px] bg-destructive hover:bg-destructive/90 text-white rounded-[10px]" onClick={() => toast("Deleted", "error")}><Trash2 size={14} /></Button>
+          {role !== "EMPLOYEE" && (
+            <Button size="icon" className="h-[34px] w-[34px] bg-destructive hover:bg-destructive/90 text-white rounded-[10px]" onClick={() => { setOpnameToDelete(item); setDeleteModalOpen(true); }}><Trash2 size={14} /></Button>
+          )}
         </div>
       )
     }
@@ -80,6 +86,24 @@ export function StockOpnameClient({
       toast(e.message, "error")
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!opnameToDelete) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/stockopname/${opnameToDelete.id}`, { method: 'DELETE' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Failed to delete stock opname");
+
+      toast("Stock opname deleted successfully", "success");
+      setDeleteModalOpen(false);
+      router.refresh();
+    } catch (e: any) {
+      toast(e.message, "error");
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -130,6 +154,16 @@ export function StockOpnameClient({
           </Button>
         </DialogFooter>
       </Dialog>
+
+      <ConfirmationModal
+        isOpen={deleteModalOpen}
+        onClose={() => setDeleteModalOpen(false)}
+        type="danger"
+        title="Delete Stock Opname"
+        message="Are you sure you want to delete this stock opname?"
+        onConfirm={handleDelete}
+        confirmText={loading ? "Deleting..." : "Delete"}
+      />
     </div>
   )
 }

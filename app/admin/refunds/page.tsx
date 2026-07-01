@@ -1,4 +1,4 @@
-import { getRefunds } from "@/lib/queries/refunds"
+import { getRefunds, getEligibleOrdersForRefund } from "@/lib/queries/refunds"
 import { RefundsClient } from "./refunds-client"
 import { getSession } from "@/lib/auth"
 import { cookies } from "next/headers"
@@ -12,7 +12,10 @@ export default async function RefundsPage() {
   const selectedBranchId = cookieStore.get("selectedBranchId")?.value;
   const branchId = !isAdmin ? Number(session.branchId) : (selectedBranchId ? Number(selectedBranchId) : undefined);
 
-  const refunds = await getRefunds(branchId)
+  const [refunds, eligibleOrders] = await Promise.all([
+    getRefunds(branchId),
+    getEligibleOrdersForRefund(branchId)
+  ]);
   
-  return <RefundsClient initialData={refunds} role={role} />
+  return <RefundsClient initialData={refunds} eligibleOrders={eligibleOrders} role={role} />
 }
